@@ -1,0 +1,15 @@
+-- Users table
+-- Note: TypeORM synchronize=true will create this in development.
+-- Run manually in production (Neon/Supabase).
+
+CREATE TABLE IF NOT EXISTS users (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email       TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role        VARCHAR(20) NOT NULL DEFAULT 'DOCTOR',
+  is_active   BOOLEAN NOT NULL DEFAULT true,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
