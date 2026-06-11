@@ -50,14 +50,14 @@ en `GET /patients`.
 | PATCH  | `/users/:id` | Actualizar usuario       |
 | DELETE | `/users/:id` | Eliminar usuario         |
 
-### Doctors (`/doctors`) — JwtAuthGuard
-| Método | Ruta           | Descripción          |
-|--------|----------------|----------------------|
-| POST   | `/doctors`     | Crear perfil doctor  |
-| GET    | `/doctors`     | Listar doctores      |
-| GET    | `/doctors/:id` | Obtener doctor       |
-| PATCH  | `/doctors/:id` | Actualizar doctor    |
-| DELETE | `/doctors/:id` | Eliminar doctor      |
+### Doctors (`/doctors`) — JwtAuthGuard (+ ADMIN para crear/editar/eliminar)
+| Método | Ruta           | Descripción                  |
+|--------|----------------|-------------------------------|
+| POST   | `/doctors`     | Crear perfil doctor — **ADMIN** |
+| GET    | `/doctors`     | Listar doctores                |
+| GET    | `/doctors/:id` | Obtener doctor                 |
+| PATCH  | `/doctors/:id` | Actualizar doctor — **ADMIN**  |
+| DELETE | `/doctors/:id` | Eliminar doctor — **ADMIN**    |
 
 ### Patients (`/patients`) — JwtAuthGuard (+ ADMIN para borrar)
 | Método | Ruta                    | Descripción                                          |
