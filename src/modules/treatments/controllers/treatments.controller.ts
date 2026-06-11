@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
@@ -15,6 +16,7 @@ import { Roles } from '../../../common/decorators/roles.decorator';
 import { TreatmentsService } from '../services/treatments.service';
 import { CreateTreatmentDto } from '../dto/create-treatment.dto';
 import { UpdateTreatmentDto } from '../dto/update-treatment.dto';
+import { stripPatientForDoctor } from '../../../common/utils/strip-patient.util';
 
 @Controller('treatments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,13 +29,27 @@ export class TreatmentsController {
   }
 
   @Get()
-  findAll(@Query('patientId') patientId?: string, @Query('status') status?: string) {
-    return this.service.findAll(patientId, status);
+  async findAll(@Query('patientId') patientId: string | undefined, @Query('status') status: string | undefined, @Request() req) {
+    const treatments = await this.service.findAll(patientId, status);
+    if (req.user?.role === 'DOCTOR') {
+      return treatments.map((t) => ({
+        ...t,
+        patient: t.patient ? stripPatientForDoctor(t.patient) : t.patient,
+      }));
+    }
+    return treatments;
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  async findOne(@Param('id') id: string, @Request() req) {
+    const treatment = await this.service.findOne(id);
+    if (req.user?.role === 'DOCTOR') {
+      return {
+        ...treatment,
+        patient: treatment.patient ? stripPatientForDoctor(treatment.patient) : treatment.patient,
+      };
+    }
+    return treatment;
   }
 
   @Patch(':id')

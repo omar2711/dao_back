@@ -16,25 +16,7 @@ import { Roles } from '../../../common/decorators/roles.decorator';
 import { PatientsService } from '../services/patients.service';
 import { CreatePatientDto } from '../dto/create-patient.dto';
 import { UpdatePatientDto } from '../dto/update-patient.dto';
-import { Patient } from '../entities/patient.entity';
-
-// Fields visible to DOCTOR role (no personal data)
-const DOCTOR_VISIBLE: (keyof Patient)[] = [
-  'id',
-  'firstName',
-  'lastName',
-  'gender',
-  'birthDate',
-  'createdAt',
-  'updatedAt',
-];
-
-function stripForDoctor(patient: Patient): Partial<Patient> {
-  return DOCTOR_VISIBLE.reduce((acc, key) => {
-    acc[key as string] = patient[key];
-    return acc;
-  }, {} as Partial<Patient>);
-}
+import { stripPatientForDoctor } from '../../../common/utils/strip-patient.util';
 
 @Controller('patients')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -50,7 +32,7 @@ export class PatientsController {
   async findAll(@Query('search') search: string, @Request() req) {
     const patients = await this.patientsService.findAll(search);
     if (req.user?.role === 'DOCTOR') {
-      return patients.map(stripForDoctor);
+      return patients.map(stripPatientForDoctor);
     }
     return patients;
   }
@@ -59,7 +41,7 @@ export class PatientsController {
   async findOne(@Param('id') id: string, @Request() req) {
     const patient = await this.patientsService.findOne(id);
     if (req.user?.role === 'DOCTOR') {
-      return stripForDoctor(patient);
+      return stripPatientForDoctor(patient);
     }
     return patient;
   }

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Treatment } from '../entities/treatment.entity';
 import { CreateTreatmentDto } from '../dto/create-treatment.dto';
 import { UpdateTreatmentDto } from '../dto/update-treatment.dto';
+import { computeTreatmentStatus } from '../utils/treatment-status.util';
 
 @Injectable()
 export class TreatmentsService {
@@ -41,6 +42,9 @@ export class TreatmentsService {
   async update(id: string, dto: UpdateTreatmentDto): Promise<Treatment> {
     const record = await this.findOne(id);
     Object.assign(record, dto);
+    if (!dto.status) {
+      record.status = computeTreatmentStatus(record.cost, record.paid, record.progress, record.status);
+    }
     return this.repo.save(record);
   }
 

@@ -9,6 +9,7 @@ import { AppointmentsModule } from './modules/appointments/appointments.module';
 import { ClinicalHistoriesModule } from './modules/clinical-histories/clinical-histories.module';
 import { OdontogramasModule } from './modules/odontogramas/odontogramas.module';
 import { TreatmentsModule } from './modules/treatments/treatments.module';
+import { TreatmentSessionsModule } from './modules/treatment-sessions/treatment-sessions.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { TreatmentsModule } from './modules/treatments/treatments.module';
     ClinicalHistoriesModule,
     OdontogramasModule,
     TreatmentsModule,
+    TreatmentSessionsModule,
   ],
 })
 export class AppModule {}
