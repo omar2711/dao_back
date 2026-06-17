@@ -1,6 +1,9 @@
 -- Odontograma - NTS 150-MINSA-2019/DGIESP (Sistema Dígito Dos / FDI)
 -- teeth_data: JSONB keyed by FDI tooth number, each value = array of findings
--- Example: { "11": [{"code":"AM","color":"blue","surfaces":["O","M"]}] }
+-- surfaces: caras afectadas (O, M, D, V, L). roots: índices de raíz (0-based) con
+-- tratamiento pulpar. Al ser JSONB no requiere migración para nuevos campos.
+-- Example: { "11": [{"code":"AM","color":"blue","surfaces":["O","M"]},
+--                   {"code":"TC","color":"blue","roots":[0]}] }
 CREATE TABLE IF NOT EXISTS odontogramas (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   patient_id          UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,

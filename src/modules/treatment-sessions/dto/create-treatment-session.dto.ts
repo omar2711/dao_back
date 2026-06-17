@@ -2,6 +2,7 @@ import {
   ArrayUnique,
   IsArray,
   IsDateString,
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -9,6 +10,9 @@ import {
   IsUUID,
   Min,
 } from 'class-validator';
+
+export const PAYMENT_METHODS = ['EFECTIVO', 'YAPE', 'OTRO'] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export class CreateTreatmentSessionDto {
   @IsUUID()
@@ -49,6 +53,12 @@ export class CreateTreatmentSessionDto {
   @IsNumber()
   @Min(0)
   amountPaid?: number;
+
+  @IsOptional()
+  @IsEnum(PAYMENT_METHODS, {
+    message: `paymentMethod debe ser uno de: ${PAYMENT_METHODS.join(', ')}`,
+  })
+  paymentMethod?: PaymentMethod;
 
   @IsOptional()
   @IsString()

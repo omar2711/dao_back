@@ -59,6 +59,9 @@ export class TreatmentSession {
   @Column({ name: 'amount_paid', type: 'numeric', precision: 10, scale: 2, default: 0 })
   amountPaid: number;
 
+  @Column({ name: 'payment_method', type: 'varchar', length: 20, nullable: true })
+  paymentMethod: string;
+
   @Column({ type: 'text', nullable: true })
   notes: string;
 

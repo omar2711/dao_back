@@ -71,6 +71,12 @@ export class Treatment {
   @Column({ type: 'smallint', default: 0 })
   progress: number;
 
+  @Column({ name: 'total_sessions', type: 'int', default: 1 })
+  totalSessions: number;
+
+  @Column({ name: 'sessions_done', type: 'int', default: 0 })
+  sessionsDone: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

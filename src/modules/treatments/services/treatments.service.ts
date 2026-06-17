@@ -43,7 +43,7 @@ export class TreatmentsService {
     const record = await this.findOne(id);
     Object.assign(record, dto);
     if (!dto.status) {
-      record.status = computeTreatmentStatus(record.cost, record.paid, record.progress, record.status);
+      record.status = computeTreatmentStatus(record.cost, record.paid, record.sessionsDone, record.totalSessions, record.status);
     }
     return this.repo.save(record);
   }

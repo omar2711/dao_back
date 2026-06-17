@@ -3,6 +3,7 @@ import {
   IsArray,
   IsDateString,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -64,4 +65,9 @@ export class CreateTreatmentDto {
   @IsNumber()
   @Min(0)
   progress?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  totalSessions?: number;
 }

@@ -30,7 +30,7 @@ export class TreatmentSessionsService {
         paymentDoctorId: dto.paymentDoctorId ?? dto.doctorId,
       });
       const saved = await sessionRepo.save(record);
-      await this.recalculatePaid(manager, dto.treatmentId);
+      await this.recalculateTreatment(manager, dto.treatmentId);
       return saved;
     });
   }
@@ -70,7 +70,7 @@ export class TreatmentSessionsService {
       }
 
       const saved = await sessionRepo.save(record);
-      await this.recalculatePaid(manager, record.treatmentId);
+      await this.recalculateTreatment(manager, record.treatmentId);
       return saved;
     });
   }
@@ -83,7 +83,7 @@ export class TreatmentSessionsService {
 
       const treatmentId = record.treatmentId;
       await sessionRepo.remove(record);
-      await this.recalculatePaid(manager, treatmentId);
+      await this.recalculateTreatment(manager, treatmentId);
       return { message: 'Sesión de tratamiento eliminada' };
     });
   }
@@ -120,17 +120,19 @@ export class TreatmentSessionsService {
     }));
   }
 
-  private async recalculatePaid(manager: EntityManager, treatmentId: string): Promise<void> {
-    const { sum } = await manager
+  private async recalculateTreatment(manager: EntityManager, treatmentId: string): Promise<void> {
+    const row = await manager
       .createQueryBuilder(TreatmentSession, 's')
       .select('COALESCE(SUM(s.amount_paid), 0)', 'sum')
+      .addSelect('COUNT(*)', 'count')
       .where('s.treatment_id = :treatmentId', { treatmentId })
-      .getRawOne<{ sum: string }>();
+      .getRawOne<{ sum: string; count: string }>();
 
-    const paid = Number(sum);
+    const paid = Number(row?.sum ?? 0);
+    const sessionsDone = Number(row?.count ?? 0);
     const treatment = await manager.findOneByOrFail(Treatment, { id: treatmentId });
-    const status = computeTreatmentStatus(treatment.cost, paid, treatment.progress, treatment.status);
+    const status = computeTreatmentStatus(treatment.cost, paid, sessionsDone, treatment.totalSessions, treatment.status);
 
-    await manager.update(Treatment, treatmentId, { paid, status });
+    await manager.update(Treatment, treatmentId, { paid, sessionsDone, status });
   }
 }

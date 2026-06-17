@@ -36,3 +36,11 @@ CREATE OR REPLACE TRIGGER trg_odontogramas_updated_at
 CREATE OR REPLACE TRIGGER trg_treatments_updated_at
   BEFORE UPDATE ON treatments
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE OR REPLACE TRIGGER trg_inventory_items_updated_at
+  BEFORE UPDATE ON inventory_items
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE OR REPLACE TRIGGER trg_inventory_movements_updated_at
+  BEFORE UPDATE ON inventory_movements
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();

@@ -10,6 +10,8 @@ import { ClinicalHistoriesModule } from './modules/clinical-histories/clinical-h
 import { OdontogramasModule } from './modules/odontogramas/odontogramas.module';
 import { TreatmentsModule } from './modules/treatments/treatments.module';
 import { TreatmentSessionsModule } from './modules/treatment-sessions/treatment-sessions.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { TreatmentSessionsModule } from './modules/treatment-sessions/treatment-
     OdontogramasModule,
     TreatmentsModule,
     TreatmentSessionsModule,
+    ReportsModule,
+    InventoryModule,
   ],
 })
 export class AppModule {}
