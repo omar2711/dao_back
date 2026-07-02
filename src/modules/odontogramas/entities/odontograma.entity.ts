@@ -61,6 +61,10 @@ export class Odontograma {
   @Column({ type: 'text', nullable: true })
   observaciones: string;
 
+  // JSONB: Record<toothNumber, { tooth?: string, surfaces?: Record<string, string>, roots?: string[] }>
+  @Column({ name: 'tooth_observations', type: 'jsonb', nullable: true, default: {} })
+  toothObservations: Record<string, any>;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

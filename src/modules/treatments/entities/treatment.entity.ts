@@ -77,6 +77,12 @@ export class Treatment {
   @Column({ name: 'sessions_done', type: 'int', default: 0 })
   sessionsDone: number;
 
+  @Column({ name: 'requires_laboratory', type: 'boolean', default: false })
+  requiresLaboratory: boolean;
+
+  @Column({ name: 'laboratory_notes', type: 'text', nullable: true })
+  laboratoryNotes: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

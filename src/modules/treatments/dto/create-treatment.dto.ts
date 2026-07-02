@@ -1,6 +1,7 @@
 import {
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -70,4 +71,12 @@ export class CreateTreatmentDto {
   @IsInt()
   @Min(1)
   totalSessions?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  requiresLaboratory?: boolean;
+
+  @IsOptional()
+  @IsString()
+  laboratoryNotes?: string;
 }

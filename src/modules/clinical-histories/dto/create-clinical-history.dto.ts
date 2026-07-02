@@ -1,4 +1,10 @@
 import { IsDateString, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { Transform } from 'class-transformer';
+
+function trimOrUndefined({ value }: { value: any }) {
+  if (typeof value === 'string') return value.trim() || undefined;
+  return value;
+}
 
 export class CreateClinicalHistoryDto {
   @IsUUID()
@@ -10,105 +16,131 @@ export class CreateClinicalHistoryDto {
   doctorId: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   hcNumber?: string;
 
+  @IsOptional()
   @IsDateString()
-  fecha: string;
+  fecha?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   hora?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   motivoConsulta?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   enfermedadActual?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   tiempoEnfermedad?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   signosSintomas?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   relatoCronologico?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   funcionesBiologicas?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   antecedentesFamiliares?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   antecedentesPersonales?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   viajesUltimoAnio?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   signosVitalesPa?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   signosVitalesPulso?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   signosVitalesTemp?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   signosVitalesFc?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   signosVitalesFr?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   examenClinicoGeneral?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   examenClinicoOdontostomatologico?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   diagnosticoPresuntivo?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   diagnosticoDefinitivo?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   planTratamiento?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   pronostico?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   tratamientoRecomendaciones?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   controlEvolucion?: string;
 
   @IsOptional()
+  @Transform(trimOrUndefined)
   @IsString()
   altaPaciente?: string;
 }

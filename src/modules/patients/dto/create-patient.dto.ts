@@ -17,9 +17,9 @@ export class CreatePatientDto {
   @IsString()
   gender?: string;
 
-  @IsOptional()
   @IsString()
-  phone?: string;
+  @IsNotEmpty()
+  phone: string;
 
   @IsOptional()
   @IsEmail()

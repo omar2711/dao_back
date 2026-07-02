@@ -22,8 +22,11 @@ export class Appointment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'patient_id' })
-  patientId: string;
+  @Column({ name: 'patient_id', nullable: true })
+  patientId: string | null;
+
+  @Column({ name: 'guest_name', type: 'text', nullable: true })
+  guestName: string | null;
 
   @Column({ name: 'doctor_id' })
   doctorId: string;
@@ -49,9 +52,9 @@ export class Appointment {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @ManyToOne(() => Patient, (p) => p.appointments, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Patient, (p) => p.appointments, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'patient_id' })
-  patient: Patient;
+  patient: Patient | null;
 
   @ManyToOne(() => Doctor, (d) => d.appointments, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'doctor_id' })

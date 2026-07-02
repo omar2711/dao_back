@@ -2,8 +2,13 @@ import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, IsUUID } from 'cl
 import { AppointmentStatus } from '../entities/appointment.entity';
 
 export class CreateAppointmentDto {
+  @IsOptional()
   @IsUUID()
-  patientId: string;
+  patientId?: string;
+
+  @IsOptional()
+  @IsString()
+  guestName?: string;
 
   @IsUUID()
   doctorId: string;
