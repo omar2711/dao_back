@@ -1,8 +1,11 @@
 import { IsDateString, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Transform } from 'class-transformer';
 
+// Convierte cadenas vacías a null (no a undefined) para que, al editar,
+// un campo dejado en blanco realmente limpie el valor en la base de datos:
+// TypeORM ignora las propiedades `undefined` en un UPDATE, pero sí aplica `null`.
 function trimOrUndefined({ value }: { value: any }) {
-  if (typeof value === 'string') return value.trim() || undefined;
+  if (typeof value === 'string') return value.trim() || null;
   return value;
 }
 

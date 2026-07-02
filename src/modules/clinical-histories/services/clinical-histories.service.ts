@@ -12,9 +12,23 @@ export class ClinicalHistoriesService {
     private repo: Repository<ClinicalHistory>,
   ) {}
 
-  create(dto: CreateClinicalHistoryDto): Promise<ClinicalHistory> {
-    const record = this.repo.create(dto);
+  async create(dto: CreateClinicalHistoryDto): Promise<ClinicalHistory> {
+    const hcNumber = dto.hcNumber ?? (await this.nextHcNumber(dto.patientId));
+    const record = this.repo.create({ ...dto, hcNumber });
     return this.repo.save(record);
+  }
+
+  // Autonumera el HC N° por paciente (1, 2, 3...) cuando se deja en blanco.
+  // Solo cuenta hc_number puramente numéricos para no romperse con datos
+  // históricos que pudieran tener otro formato.
+  private async nextHcNumber(patientId: string): Promise<string> {
+    const { max } = await this.repo
+      .createQueryBuilder('ch')
+      .select('MAX(CAST(ch.hc_number AS INTEGER))', 'max')
+      .where('ch.patient_id = :patientId', { patientId })
+      .andWhere("ch.hc_number ~ '^[0-9]+$'")
+      .getRawOne<{ max: string | null }>();
+    return String((max ? parseInt(max, 10) : 0) + 1);
   }
 
   findAll(patientId?: string): Promise<ClinicalHistory[]> {

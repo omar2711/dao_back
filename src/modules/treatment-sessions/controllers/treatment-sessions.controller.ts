@@ -7,11 +7,11 @@ import {
   Patch,
   Post,
   Query,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
 import { TreatmentSessionsService } from '../services/treatment-sessions.service';
 import { CreateTreatmentSessionDto } from '../dto/create-treatment-session.dto';
 import { UpdateTreatmentSessionDto } from '../dto/update-treatment-session.dto';
@@ -46,9 +46,10 @@ export class TreatmentSessionsController {
     return this.service.update(id, dto);
   }
 
+  // Abierto a cualquier rol autenticado (antes solo ADMIN): un doctor puede
+  // corregir una sesión mal cargada; el rol ADMIN recibe una notificación.
   @Delete(':id')
-  @Roles('ADMIN')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('id') id: string, @Query('restoreStock') restoreStock: string, @Request() req) {
+    return this.service.remove(id, restoreStock === 'true', req.user?.email);
   }
 }

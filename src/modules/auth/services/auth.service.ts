@@ -33,6 +33,15 @@ export class AuthService {
     };
   }
 
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.usersService.findByIdWithPassword(userId);
+    if (!user) throw new UnauthorizedException();
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) throw new UnauthorizedException('La contraseña actual es incorrecta');
+    await this.usersService.update(userId, { password: newPassword });
+    return { message: 'Contraseña actualizada' };
+  }
+
   refresh(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken, {

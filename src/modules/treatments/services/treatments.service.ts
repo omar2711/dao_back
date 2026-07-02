@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Treatment } from '../entities/treatment.entity';
@@ -41,6 +41,11 @@ export class TreatmentsService {
 
   async update(id: string, dto: UpdateTreatmentDto): Promise<Treatment> {
     const record = await this.findOne(id);
+    if (dto.cost !== undefined && Number(dto.cost) < Number(record.paid)) {
+      throw new BadRequestException(
+        `El costo (S/. ${Number(dto.cost).toFixed(2)}) no puede ser menor a lo ya pagado (S/. ${Number(record.paid).toFixed(2)}).`,
+      );
+    }
     Object.assign(record, dto);
     if (!dto.status) {
       record.status = computeTreatmentStatus(record.cost, record.paid, record.sessionsDone, record.totalSessions, record.status);

@@ -3,6 +3,7 @@ import { LocalAuthGuard } from '../../../common/guards/local-auth.guard';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { AuthService } from '../services/auth.service';
 import { RefreshTokenDto } from '../dto/refresh-token.dto';
+import { ChangePasswordDto } from '../dto/change-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -23,5 +24,11 @@ export class AuthController {
   @Post('logout')
   logout() {
     return { message: 'Logged out successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  changePassword(@Request() req: any, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(req.user.id, dto.currentPassword, dto.newPassword);
   }
 }

@@ -36,6 +36,14 @@ export class UsersService {
       .getOne();
   }
 
+  async findByIdWithPassword(id: string): Promise<User | null> {
+    return this.repo
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .where('user.id = :id', { id })
+      .getOne();
+  }
+
   async update(id: string, dto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
     if (dto.password) {
@@ -43,6 +51,7 @@ export class UsersService {
     }
     if (dto.email) user.email = dto.email;
     if (dto.role) user.role = dto.role;
+    if (dto.isActive !== undefined) user.isActive = dto.isActive;
     return this.repo.save(user);
   }
 

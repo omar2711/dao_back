@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { InventoryItem } from '../entities/inventory-item.entity';
 import { InventoryMovement } from '../entities/inventory-movement.entity';
 import { CreateInventoryItemDto } from '../dto/create-inventory-item.dto';
@@ -62,36 +62,62 @@ export class InventoryService {
 
   // ─── Movements ───────────────────────────────────────────────────────────────
 
-  createMovement(dto: CreateInventoryMovementDto): Promise<InventoryMovement> {
-    return this.dataSource.transaction(async (manager) => {
-      const itemRepo = manager.getRepository(InventoryItem);
-      const movRepo = manager.getRepository(InventoryMovement);
+  // Cuando se pasa un `manager`, la operación participa en la transacción del
+  // llamador (ej. crear una sesión de tratamiento con sus insumos) en vez de
+  // abrir una transacción propia — así un fallo revierte todo junto.
+  createMovement(dto: CreateInventoryMovementDto, manager?: EntityManager): Promise<InventoryMovement> {
+    if (manager) return this.runCreateMovement(manager, dto);
+    return this.dataSource.transaction((m) => this.runCreateMovement(m, dto));
+  }
 
-      const item = await itemRepo.findOne({ where: { id: dto.itemId } });
-      if (!item) throw new NotFoundException('Insumo no encontrado');
+  private async runCreateMovement(
+    manager: EntityManager,
+    dto: CreateInventoryMovementDto,
+  ): Promise<InventoryMovement> {
+    const itemRepo = manager.getRepository(InventoryItem);
+    const movRepo = manager.getRepository(InventoryMovement);
 
-      const qty = Number(dto.quantity);
-      const current = Number(item.currentStock);
-      let next = current;
-      if (dto.type === 'IN') next = current + qty;
-      else if (dto.type === 'OUT') next = current - qty;
-      else next = qty; // ADJUST: fija el stock al valor indicado
+    const item = await itemRepo.findOne({ where: { id: dto.itemId } });
+    if (!item) throw new NotFoundException('Insumo no encontrado');
 
-      if (next < 0) {
-        throw new BadRequestException(
-          `Stock insuficiente: disponible ${current}, solicitado ${qty}`,
-        );
-      }
+    const qty = Number(dto.quantity);
+    const current = Number(item.currentStock);
+    let next = current;
+    if (dto.type === 'IN') next = current + qty;
+    else if (dto.type === 'OUT') next = current - qty;
+    else next = qty; // ADJUST: fija el stock al valor indicado
 
-      const movement = movRepo.create({
-        ...dto,
-        unitCost: dto.unitCost ?? Number(item.unitCost),
-      });
-      const saved = await movRepo.save(movement);
+    if (next < 0) {
+      throw new BadRequestException(
+        `Stock insuficiente: disponible ${current}, solicitado ${qty}`,
+      );
+    }
 
-      await itemRepo.update(item.id, { currentStock: next });
-      return saved;
+    const movement = movRepo.create({
+      ...dto,
+      unitCost: dto.unitCost ?? Number(item.unitCost),
     });
+    const saved = await movRepo.save(movement);
+
+    await itemRepo.update(item.id, { currentStock: next });
+    return saved;
+  }
+
+  // Revierte el consumo de una sesión eliminada: devuelve la cantidad al
+  // stock de cada insumo y borra los movimientos OUT asociados a la sesión.
+  async reverseSessionMovements(manager: EntityManager, treatmentSessionId: string): Promise<void> {
+    const movRepo = manager.getRepository(InventoryMovement);
+    const itemRepo = manager.getRepository(InventoryItem);
+
+    const sessionMovements = await movRepo.find({
+      where: { treatmentSessionId, type: 'OUT' },
+    });
+    if (sessionMovements.length === 0) return;
+
+    for (const mv of sessionMovements) {
+      await itemRepo.increment({ id: mv.itemId }, 'currentStock', Number(mv.quantity));
+    }
+    await movRepo.remove(sessionMovements);
   }
 
   listMovements(filters: {
