@@ -32,6 +32,14 @@ export class Doctor {
   @Column({ nullable: true })
   specialty: string;
 
+  // Número de colegiatura del Colegio Odontológico del Perú (reemplaza "licencia").
+  @Column({ nullable: true })
+  cop: string;
+
+  // Dirección de domicilio del doctor.
+  @Column({ type: 'text', nullable: true })
+  address: string;
+
   @Column({ name: 'license_number', nullable: true })
   licenseNumber: string;
 

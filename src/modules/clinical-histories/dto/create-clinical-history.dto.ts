@@ -23,6 +23,42 @@ export class CreateClinicalHistoryDto {
   @IsString()
   hcNumber?: string;
 
+  // FILIACIÓN (movida desde el registro del paciente)
+  @IsOptional()
+  @Transform(trimOrUndefined)
+  @IsString()
+  direccion?: string;
+
+  @IsOptional()
+  @Transform(trimOrUndefined)
+  @IsString()
+  distrito?: string;
+
+  @IsOptional()
+  @Transform(trimOrUndefined)
+  @IsString()
+  gradoInstruccion?: string;
+
+  @IsOptional()
+  @Transform(trimOrUndefined)
+  @IsString()
+  procedencia?: string;
+
+  @IsOptional()
+  @Transform(trimOrUndefined)
+  @IsString()
+  ocupacion?: string;
+
+  @IsOptional()
+  @Transform(trimOrUndefined)
+  @IsString()
+  emergenciaContacto?: string;
+
+  @IsOptional()
+  @Transform(trimOrUndefined)
+  @IsString()
+  observaciones?: string;
+
   @IsOptional()
   @IsDateString()
   fecha?: string;
@@ -71,6 +107,16 @@ export class CreateClinicalHistoryDto {
   @Transform(trimOrUndefined)
   @IsString()
   antecedentesPersonales?: string;
+
+  @IsOptional()
+  @Transform(trimOrUndefined)
+  @IsString()
+  alergias?: string;
+
+  @IsOptional()
+  @Transform(trimOrUndefined)
+  @IsString()
+  enfermedades?: string;
 
   @IsOptional()
   @Transform(trimOrUndefined)

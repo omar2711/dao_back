@@ -58,4 +58,55 @@ export class TreatmentsService {
     await this.repo.remove(record);
     return { message: 'Tratamiento eliminado' };
   }
+
+  // Desempeño por doctor a partir de la tabla de tratamientos (no de sesiones):
+  // cuenta tratamientos terminados/activos y suma lo cobrado/pendiente SOLO de
+  // los tratamientos COMPLETADO, atribuido al doctor tratante (t.doctor_id).
+  async summaryByDoctor(): Promise<DoctorTreatmentSummary[]> {
+    const rows = await this.repo
+      .createQueryBuilder('t')
+      .leftJoin('t.doctor', 'd')
+      .select('t.doctor_id', 'doctorId')
+      .addSelect("d.first_name || ' ' || d.last_name", 'doctorName')
+      .addSelect("COUNT(*) FILTER (WHERE t.status = 'COMPLETADO')", 'completed')
+      .addSelect("COUNT(*) FILTER (WHERE t.status <> 'COMPLETADO')", 'active')
+      .addSelect(
+        "COALESCE(SUM(t.paid) FILTER (WHERE t.status = 'COMPLETADO'), 0)",
+        'paidCompleted',
+      )
+      .addSelect(
+        "COALESCE(SUM(t.cost - t.paid) FILTER (WHERE t.status = 'COMPLETADO'), 0)",
+        'pendingCompleted',
+      )
+      .groupBy('t.doctor_id')
+      .addGroupBy('d.first_name')
+      .addGroupBy('d.last_name')
+      .orderBy('"paidCompleted"', 'DESC')
+      .getRawMany<{
+        doctorId: string;
+        doctorName: string;
+        completed: string;
+        active: string;
+        paidCompleted: string;
+        pendingCompleted: string;
+      }>();
+
+    return rows.map((r) => ({
+      doctorId: r.doctorId,
+      doctorName: r.doctorName,
+      treatmentsCompleted: Number(r.completed),
+      treatmentsActive: Number(r.active),
+      paidCompleted: Number(r.paidCompleted),
+      pendingCompleted: Number(r.pendingCompleted),
+    }));
+  }
+}
+
+export interface DoctorTreatmentSummary {
+  doctorId: string;
+  doctorName: string;
+  treatmentsCompleted: number;
+  treatmentsActive: number;
+  paidCompleted: number;
+  pendingCompleted: number;
 }

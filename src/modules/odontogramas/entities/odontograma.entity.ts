@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -20,6 +21,11 @@ export enum OdontogramaTipo {
 // { "11": [{ code: "AM", color: "blue", surfaces: ["O","M"], type: "RESTAURACION_DEFINITIVA" }] }
 
 @Entity('odontogramas')
+// Máximo un odontograma por historia clínica (cuando está vinculado a una).
+@Index('uq_odontograma_ch', ['clinicalHistoryId'], {
+  unique: true,
+  where: '"clinical_history_id" IS NOT NULL',
+})
 export class Odontograma {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -58,8 +64,12 @@ export class Odontograma {
   @Column({ type: 'text', nullable: true })
   especificaciones: string;
 
+  // Se muestra como "Diagnóstico" en la UI
   @Column({ type: 'text', nullable: true })
   observaciones: string;
+
+  @Column({ name: 'plan_tratamiento', type: 'text', nullable: true })
+  planTratamiento: string;
 
   // JSONB: Record<toothNumber, { tooth?: string, surfaces?: Record<string, string>, roots?: string[] }>
   @Column({ name: 'tooth_observations', type: 'jsonb', nullable: true, default: {} })

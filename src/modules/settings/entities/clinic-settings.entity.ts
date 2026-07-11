@@ -24,6 +24,10 @@ export class ClinicSettings {
   @Column({ name: 'notify_new_patients', default: true })
   notifyNewPatients: boolean;
 
+  // Duración de la sesión (formato de expiración JWT, ej. '8h', '7d', '30d').
+  @Column({ name: 'session_duration', default: '7d' })
+  sessionDuration: string;
+
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

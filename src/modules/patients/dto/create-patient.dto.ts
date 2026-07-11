@@ -44,6 +44,46 @@ export class CreatePatientDto {
 
   @IsOptional()
   @IsString()
+  distrito?: string;
+
+  @IsOptional()
+  @IsString()
+  gradoInstruccion?: string;
+
+  @IsOptional()
+  @IsString()
+  nombreMadre?: string;
+
+  @IsOptional()
+  @IsString()
+  ocupacionMadre?: string;
+
+  @IsOptional()
+  @IsString()
+  telefonoMadre?: string;
+
+  @IsOptional()
+  @IsString()
+  nombrePadre?: string;
+
+  @IsOptional()
+  @IsString()
+  ocupacionPadre?: string;
+
+  @IsOptional()
+  @IsString()
+  telefonoPadre?: string;
+
+  @IsOptional()
+  @IsString()
+  alergias?: string;
+
+  @IsOptional()
+  @IsString()
+  enfermedades?: string;
+
+  @IsOptional()
+  @IsString()
   emergenciaContacto?: string;
 
   @IsOptional()

@@ -43,7 +43,8 @@ export class PatientsService {
 
   async remove(id: string): Promise<{ message: string }> {
     const patient = await this.findOne(id);
-    await this.repo.remove(patient);
+    // Soft delete: marca deleted_at en vez de borrar la fila.
+    await this.repo.softRemove(patient);
     return { message: 'Patient deleted' };
   }
 }

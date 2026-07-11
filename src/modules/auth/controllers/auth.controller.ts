@@ -11,8 +11,8 @@ export class AuthController {
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  login(@Request() req: any) {
-    return this.authService.login(req.user);
+  login(@Request() req: any, @Body() body: { rememberMe?: boolean }) {
+    return this.authService.login(req.user, body?.rememberMe === true);
   }
 
   @Post('refresh')

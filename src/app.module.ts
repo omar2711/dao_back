@@ -9,6 +9,7 @@ import { AppointmentsModule } from './modules/appointments/appointments.module';
 import { ClinicalHistoriesModule } from './modules/clinical-histories/clinical-histories.module';
 import { OdontogramasModule } from './modules/odontogramas/odontogramas.module';
 import { TreatmentsModule } from './modules/treatments/treatments.module';
+import { TreatmentCatalogModule } from './modules/treatment-catalog/treatment-catalog.module';
 import { TreatmentSessionsModule } from './modules/treatment-sessions/treatment-sessions.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
@@ -27,6 +28,7 @@ import { SettingsModule } from './modules/settings/settings.module';
     ClinicalHistoriesModule,
     OdontogramasModule,
     TreatmentsModule,
+    TreatmentCatalogModule,
     TreatmentSessionsModule,
     ReportsModule,
     InventoryModule,

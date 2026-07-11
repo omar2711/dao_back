@@ -40,6 +40,11 @@ export class TreatmentsController {
     return treatments;
   }
 
+  @Get('summary-by-doctor')
+  summaryByDoctor() {
+    return this.service.summaryByDoctor();
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string, @Request() req) {
     const treatment = await this.service.findOne(id);

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Odontograma } from '../entities/odontograma.entity';
@@ -12,7 +16,17 @@ export class OdontogramasService {
     private repo: Repository<Odontograma>,
   ) {}
 
-  create(dto: CreateOdontogramaDto): Promise<Odontograma> {
+  async create(dto: CreateOdontogramaDto): Promise<Odontograma> {
+    // Sólo se permite un odontograma por historia clínica.
+    if (dto.clinicalHistoryId) {
+      const existing = await this.repo.findOne({
+        where: { clinicalHistoryId: dto.clinicalHistoryId },
+      });
+      if (existing)
+        throw new ConflictException(
+          'Esta historia clínica ya tiene un odontograma. Edite el existente.',
+        );
+    }
     const record = this.repo.create(dto);
     return this.repo.save(record);
   }
@@ -42,6 +56,16 @@ export class OdontogramasService {
 
   async update(id: string, dto: UpdateOdontogramaDto): Promise<Odontograma> {
     const record = await this.findOne(id);
+    // Si se reasigna la historia clínica, verificar que no esté ya ocupada por otro.
+    if (dto.clinicalHistoryId && dto.clinicalHistoryId !== record.clinicalHistoryId) {
+      const existing = await this.repo.findOne({
+        where: { clinicalHistoryId: dto.clinicalHistoryId },
+      });
+      if (existing && existing.id !== id)
+        throw new ConflictException(
+          'Esta historia clínica ya tiene un odontograma. Edite el existente.',
+        );
+    }
     Object.assign(record, dto);
     return this.repo.save(record);
   }

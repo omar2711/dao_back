@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../../users/services/users.service';
+import { SettingsService } from '../../settings/services/settings.service';
 
 @Injectable()
 export class AuthService {
@@ -10,6 +11,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private config: ConfigService,
+    private settingsService: SettingsService,
   ) {}
 
   async validateUser(email: string, password: string) {
@@ -21,10 +23,18 @@ export class AuthService {
     return result;
   }
 
-  login(user: { id: string; email: string; role: string }) {
+  async login(
+    user: { id: string; email: string; role: string },
+    rememberMe = false,
+  ) {
     const payload = { sub: user.id, email: user.email, role: user.role };
+    // Duración configurable desde el módulo de Configuración. Con "Recuérdame"
+    // se usa una duración larga fija para mantener la sesión más tiempo.
+    const settings = await this.settingsService.get();
+    const sessionDuration = settings.sessionDuration || '7d';
+    const expiresIn = (rememberMe ? '30d' : sessionDuration) as `${number}${'s' | 'm' | 'h' | 'd' | 'w' | 'y'}`;
     return {
-      accessToken: this.jwtService.sign(payload),
+      accessToken: this.jwtService.sign(payload, { expiresIn }),
       refreshToken: this.jwtService.sign(payload, {
         secret: this.config.get('JWT_REFRESH_SECRET'),
         expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN'),

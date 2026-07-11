@@ -23,5 +23,13 @@ export class CreateDoctorDto {
 
   @IsOptional()
   @IsString()
+  cop?: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsOptional()
+  @IsString()
   licenseNumber?: string;
 }

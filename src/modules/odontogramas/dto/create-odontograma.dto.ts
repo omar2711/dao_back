@@ -41,6 +41,10 @@ export class CreateOdontogramaDto {
   observaciones?: string;
 
   @IsOptional()
+  @IsString()
+  planTratamiento?: string;
+
+  @IsOptional()
   @IsObject()
   toothObservations?: Record<string, any>;
 }

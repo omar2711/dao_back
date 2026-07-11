@@ -15,7 +15,6 @@ export interface ConsumptionRow {
   id: string;
   name: string;
   totalQuantity: number;
-  totalCost: number;
   movementCount: number;
 }
 
@@ -149,14 +148,13 @@ export class InventoryService {
       .select('m.doctor_id', 'doctorId')
       .addSelect("d.first_name || ' ' || d.last_name", 'doctorName')
       .addSelect('COALESCE(SUM(m.quantity), 0)', 'totalQuantity')
-      .addSelect('COALESCE(SUM(m.quantity * m.unit_cost), 0)', 'totalCost')
       .addSelect('COUNT(*)', 'movementCount')
       .where("m.type = 'OUT'")
       .andWhere('m.doctor_id IS NOT NULL')
       .groupBy('m.doctor_id')
       .addGroupBy('d.first_name')
       .addGroupBy('d.last_name')
-      .orderBy('"totalCost"', 'DESC');
+      .orderBy('"totalQuantity"', 'DESC');
     if (from) query.andWhere('m.created_at >= :from', { from });
     if (to) query.andWhere('m.created_at <= :to', { to });
 
@@ -165,7 +163,6 @@ export class InventoryService {
       doctorId: r.doctorId,
       doctorName: r.doctorName,
       totalQuantity: Number(r.totalQuantity),
-      totalCost: Number(r.totalCost),
       movementCount: Number(r.movementCount),
     }));
   }
@@ -177,13 +174,12 @@ export class InventoryService {
       .select('m.treatment_id', 'treatmentId')
       .addSelect('t.type', 'treatmentType')
       .addSelect('COALESCE(SUM(m.quantity), 0)', 'totalQuantity')
-      .addSelect('COALESCE(SUM(m.quantity * m.unit_cost), 0)', 'totalCost')
       .addSelect('COUNT(*)', 'movementCount')
       .where("m.type = 'OUT'")
       .andWhere('m.treatment_id IS NOT NULL')
       .groupBy('m.treatment_id')
       .addGroupBy('t.type')
-      .orderBy('"totalCost"', 'DESC');
+      .orderBy('"totalQuantity"', 'DESC');
     if (from) query.andWhere('m.created_at >= :from', { from });
     if (to) query.andWhere('m.created_at <= :to', { to });
 
@@ -192,7 +188,6 @@ export class InventoryService {
       treatmentId: r.treatmentId,
       treatmentType: r.treatmentType,
       totalQuantity: Number(r.totalQuantity),
-      totalCost: Number(r.totalCost),
       movementCount: Number(r.movementCount),
     }));
   }

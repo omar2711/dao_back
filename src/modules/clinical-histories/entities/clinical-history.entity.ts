@@ -34,6 +34,28 @@ export class ClinicalHistory {
   @Column({ name: 'hc_number', nullable: true })
   hcNumber: string;
 
+  // FILIACIÓN (movida desde el registro del paciente)
+  @Column({ type: 'text', nullable: true })
+  direccion: string;
+
+  @Column({ nullable: true })
+  distrito: string;
+
+  @Column({ name: 'grado_instruccion', nullable: true })
+  gradoInstruccion: string;
+
+  @Column({ nullable: true })
+  procedencia: string;
+
+  @Column({ nullable: true })
+  ocupacion: string;
+
+  @Column({ name: 'emergencia_contacto', type: 'text', nullable: true })
+  emergenciaContacto: string;
+
+  @Column({ type: 'text', nullable: true })
+  observaciones: string;
+
   @Column({ type: 'date' })
   fecha: string;
 
@@ -66,6 +88,12 @@ export class ClinicalHistory {
 
   @Column({ name: 'antecedentes_personales', type: 'text', nullable: true })
   antecedentesPersonales: string;
+
+  @Column({ type: 'text', nullable: true })
+  alergias: string;
+
+  @Column({ type: 'text', nullable: true })
+  enfermedades: string;
 
   @Column({ name: 'viajes_ultimo_anio', type: 'text', nullable: true })
   viajesUltimoAnio: string;

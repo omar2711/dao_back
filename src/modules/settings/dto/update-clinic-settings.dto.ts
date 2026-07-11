@@ -24,4 +24,8 @@ export class UpdateClinicSettingsDto {
   @IsOptional()
   @IsBoolean()
   notifyNewPatients?: boolean;
+
+  @IsOptional()
+  @IsString()
+  sessionDuration?: string;
 }

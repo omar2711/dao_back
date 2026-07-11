@@ -22,8 +22,10 @@ export interface RevenueByDoctorRow {
 
 export interface RevenueByTreatmentRow {
   type: string;
-  revenue: number;
-  count: number;
+  total: number; // costo total de los tratamientos terminados de este tipo
+  paid: number; // cobrado
+  pending: number; // por cobrar
+  count: number; // cantidad de tratamientos terminados
 }
 
 export interface TreatmentsByDoctorRow {
@@ -32,6 +34,7 @@ export interface TreatmentsByDoctorRow {
   treatmentsTotal: number;
   treatmentsCompleted: number;
   patientsAttended: number;
+  paidCompleted: number; // cobrado de tratamientos terminados
 }
 
 export interface MonthlyTrendRow {
@@ -127,24 +130,32 @@ export class ReportsService {
     from?: string,
     to?: string,
   ): Promise<RevenueByTreatmentRow[]> {
-    const query = this.sessions
-      .createQueryBuilder('s')
-      .leftJoin('s.treatment', 't')
+    // Basado en tratamientos TERMINADOS (no en sesiones): por tipo se muestra el
+    // costo total, lo cobrado y lo pendiente.
+    const query = this.treatments
+      .createQueryBuilder('t')
       .select('t.type', 'type')
-      .addSelect('COALESCE(SUM(s.amount_paid), 0)', 'revenue')
+      .addSelect('COALESCE(SUM(t.cost), 0)', 'total')
+      .addSelect('COALESCE(SUM(t.paid), 0)', 'paid')
+      .addSelect('COALESCE(SUM(t.cost - t.paid), 0)', 'pending')
       .addSelect('COUNT(*)', 'count')
+      .where("t.status = 'COMPLETADO'")
       .groupBy('t.type')
-      .orderBy('"revenue"', 'DESC');
-    this.applyDateRange(query, 's.session_date', from, to);
+      .orderBy('"total"', 'DESC');
+    this.applyDateRange(query, 't.start_date', from, to);
 
     const rows = await query.getRawMany<{
       type: string;
-      revenue: string;
+      total: string;
+      paid: string;
+      pending: string;
       count: string;
     }>();
     return rows.map((r) => ({
       type: r.type ?? 'Sin tipo',
-      revenue: Number(r.revenue),
+      total: Number(r.total),
+      paid: Number(r.paid),
+      pending: Number(r.pending),
       count: Number(r.count),
     }));
   }
@@ -164,6 +175,10 @@ export class ReportsService {
         'treatmentsCompleted',
       )
       .addSelect('COUNT(DISTINCT t.patient_id)', 'patientsAttended')
+      .addSelect(
+        "COALESCE(SUM(t.paid) FILTER (WHERE t.status = 'COMPLETADO'), 0)",
+        'paidCompleted',
+      )
       .groupBy('t.doctor_id')
       .addGroupBy('d.first_name')
       .addGroupBy('d.last_name')
@@ -176,6 +191,7 @@ export class ReportsService {
       treatmentsTotal: string;
       treatmentsCompleted: string;
       patientsAttended: string;
+      paidCompleted: string;
     }>();
     return rows.map((r) => ({
       doctorId: r.doctorId,
@@ -183,6 +199,7 @@ export class ReportsService {
       treatmentsTotal: Number(r.treatmentsTotal),
       treatmentsCompleted: Number(r.treatmentsCompleted),
       patientsAttended: Number(r.patientsAttended),
+      paidCompleted: Number(r.paidCompleted),
     }));
   }
 
