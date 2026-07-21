@@ -5,14 +5,21 @@ import { Appointment } from '../entities/appointment.entity';
 import { CreateAppointmentDto } from '../dto/create-appointment.dto';
 import { UpdateAppointmentDto } from '../dto/update-appointment.dto';
 import { FilterAppointmentDto } from '../dto/filter-appointment.dto';
+import { RemindersService } from '../../reminders/services/reminders.service';
 
 @Injectable()
 export class AppointmentsService {
-  constructor(@InjectRepository(Appointment) private repo: Repository<Appointment>) {}
+  constructor(
+    @InjectRepository(Appointment) private repo: Repository<Appointment>,
+    private readonly reminders: RemindersService,
+  ) {}
 
-  create(dto: CreateAppointmentDto): Promise<Appointment> {
+  async create(dto: CreateAppointmentDto): Promise<Appointment> {
     const appointment = this.repo.create(dto);
-    return this.repo.save(appointment);
+    const saved = await this.repo.save(appointment);
+    // Programa el recordatorio de WhatsApp (Redis + BullMQ).
+    await this.reminders.scheduleReminder(saved.id).catch(() => undefined);
+    return saved;
   }
 
   findAll(filter: FilterAppointmentDto): Promise<Appointment[]> {
@@ -50,13 +57,24 @@ export class AppointmentsService {
 
   async update(id: string, dto: UpdateAppointmentDto): Promise<Appointment> {
     const appointment = await this.findOne(id);
+    // Si se reprograma (cambia fecha/hora), se limpia el recordatorio ya enviado
+    // para que se vuelva a programar con la nueva fecha.
+    const dateChanged =
+      dto.appointmentDate !== undefined &&
+      new Date(dto.appointmentDate).getTime() !== new Date(appointment.appointmentDate).getTime();
+    if (dateChanged) appointment.reminderSentAt = null;
+
     Object.assign(appointment, dto);
-    return this.repo.save(appointment);
+    const saved = await this.repo.save(appointment);
+    // Reprograma (o cancela si ya no aplica) el recordatorio.
+    await this.reminders.scheduleReminder(saved.id).catch(() => undefined);
+    return saved;
   }
 
   async remove(id: string): Promise<{ message: string }> {
     const appointment = await this.findOne(id);
     await this.repo.remove(appointment);
+    await this.reminders.cancelReminder(id).catch(() => undefined);
     return { message: 'Appointment deleted' };
   }
 }

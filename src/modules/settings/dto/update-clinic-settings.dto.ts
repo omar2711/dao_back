@@ -1,4 +1,4 @@
-import { IsBoolean, IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString } from 'class-validator';
 
 export class UpdateClinicSettingsDto {
   @IsOptional()
@@ -28,4 +28,17 @@ export class UpdateClinicSettingsDto {
   @IsOptional()
   @IsString()
   sessionDuration?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  whatsappEnabled?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @IsIn([30, 60])
+  whatsappReminderLeadMinutes?: number;
+
+  @IsOptional()
+  @IsString()
+  whatsappReminderTemplate?: string;
 }

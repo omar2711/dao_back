@@ -46,6 +46,11 @@ export class Appointment {
   @Column({ type: 'text', nullable: true })
   notes: string;
 
+  // Momento en que se envió el recordatorio de WhatsApp (null = no enviado).
+  // Evita reenvíos; se resetea a null si se reprograma la cita.
+  @Column({ name: 'reminder_sent_at', type: 'timestamptz', nullable: true })
+  reminderSentAt: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

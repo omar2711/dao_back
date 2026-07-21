@@ -22,6 +22,7 @@ export class TreatmentsService {
     const query = this.repo
       .createQueryBuilder('t')
       .leftJoinAndSelect('t.doctor', 'doctor')
+      .leftJoinAndSelect('t.patient', 'patient')
       .orderBy('t.startDate', 'DESC');
 
     if (patientId) query.andWhere('t.patient_id = :patientId', { patientId });
