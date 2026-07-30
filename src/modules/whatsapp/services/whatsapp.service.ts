@@ -1,14 +1,12 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import makeWASocket, {
-  useMultiFileAuthState,
-  DisconnectReason,
-  fetchLatestBaileysVersion,
-  type WASocket,
-} from '@whiskeysockets/baileys';
 import * as QRCode from 'qrcode';
 import { join } from 'path';
 import { rm } from 'fs/promises';
 import { isWhatsappEnabled } from '../../../config/features';
+
+const dynamicImport = new Function('modulePath', 'return import(modulePath)') as (
+  modulePath: string,
+) => Promise<any>;
 
 // Logger silencioso compatible con la interfaz que espera Baileys (pino-like).
 const silentLogger: any = {
@@ -38,7 +36,7 @@ export class WhatsappService implements OnModuleInit {
   private readonly logger = new Logger(WhatsappService.name);
   private readonly authDir = join(process.cwd(), 'whatsapp-auth');
 
-  private sock: WASocket | null = null;
+  private sock: any | null = null;
   private connecting = false;
   private connected = false;
   private connectedNumber: string | null = null;
@@ -60,6 +58,10 @@ export class WhatsappService implements OnModuleInit {
     if (this.connecting) return;
     this.connecting = true;
     try {
+      const baileys = await dynamicImport('@whiskeysockets/baileys');
+      const makeWASocket = baileys.default;
+      const { useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason } = baileys;
+
       const { state, saveCreds } = await useMultiFileAuthState(this.authDir);
       const { version } = await fetchLatestBaileysVersion();
 
