@@ -8,6 +8,7 @@ import makeWASocket, {
 import * as QRCode from 'qrcode';
 import { join } from 'path';
 import { rm } from 'fs/promises';
+import { isWhatsappEnabled } from '../../../config/features';
 
 // Logger silencioso compatible con la interfaz que espera Baileys (pino-like).
 const silentLogger: any = {
@@ -50,6 +51,12 @@ export class WhatsappService implements OnModuleInit {
   }
 
   private async connect(): Promise<void> {
+    // Baileys necesita filesystem con escritura (auth-state) y un socket de larga
+    // vida: nada de eso existe en serverless, así que no se intenta conectar.
+    if (!isWhatsappEnabled()) {
+      this.logger.warn('WhatsApp deshabilitado en este entorno (sin proceso persistente).');
+      return;
+    }
     if (this.connecting) return;
     this.connecting = true;
     try {

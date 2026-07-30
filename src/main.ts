@@ -1,33 +1,9 @@
-import { NestFactory } from '@nestjs/core';
-import { NestExpressApplication } from '@nestjs/platform-express';
-import { ValidationPipe } from '@nestjs/common';
-import { join } from 'path';
-import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { createApp } from './app-factory';
 
+// Arranque como proceso normal (local y VPS con pm2).
+// El despliegue en Vercel NO pasa por acá: usa src/serverless.ts vía api/index.js.
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
-
-  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
-
-  app.setGlobalPrefix('api');
-
-  app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:3001', 'https://dao-front-dun.vercel.app'],
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-  });
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-    }),
-  );
-
-  app.useGlobalFilters(new HttpExceptionFilter());
+  const app = await createApp();
 
   const port = process.env.APP_PORT ?? 3001;
   await app.listen(port);

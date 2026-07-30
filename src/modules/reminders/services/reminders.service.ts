@@ -34,13 +34,25 @@ export class RemindersService implements OnModuleInit {
 
   constructor(
     @InjectRepository(Appointment) private readonly appointments: Repository<Appointment>,
-    @InjectQueue(REMINDERS_QUEUE) private readonly queue: Queue,
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    // Ambos llegan en null cuando no hay Redis (ver RemindersModule).
+    @InjectQueue(REMINDERS_QUEUE) private readonly queue: Queue | null,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis | null,
     private readonly settings: SettingsService,
     private readonly whatsapp: WhatsappService,
   ) {}
 
+  // Sin cola ni caché no hay recordatorios: el servicio no hace nada y las
+  // citas se siguen creando/editando normalmente.
+  private get enabled(): boolean {
+    return !!this.queue && !!this.redis;
+  }
+
   async onModuleInit() {
+    if (!this.enabled) {
+      this.logger.warn('Recordatorios deshabilitados: no hay Redis en este entorno.');
+      return;
+    }
+
     // Job repetible cada 25 min que refresca la caché y reconcilia recordatorios.
     try {
       await this.queue.add(
@@ -61,6 +73,8 @@ export class RemindersService implements OnModuleInit {
   // ─── Programación de un recordatorio ────────────────────────────────────────
   // Llamado desde AppointmentsService (create/update) y desde el sweep.
   async scheduleReminder(appointmentId: string): Promise<void> {
+    if (!this.enabled) return;
+
     const appt = await this.appointments.findOne({
       where: { id: appointmentId },
       relations: { patient: true, doctor: true },
@@ -100,6 +114,8 @@ export class RemindersService implements OnModuleInit {
   }
 
   async cancelReminder(appointmentId: string): Promise<void> {
+    if (!this.enabled) return;
+
     await this.removeJob(appointmentId);
     await this.redis.del(cacheKey(appointmentId));
   }
@@ -155,6 +171,8 @@ export class RemindersService implements OnModuleInit {
 
   // ─── Envío (ejecutado por el worker cuando dispara el job delayed) ───────────
   async sendReminder(appointmentId: string): Promise<void> {
+    if (!this.enabled) return;
+
     const settings = await this.settings.get();
     if (!settings.whatsappEnabled || !settings.notifyAppointmentReminders) return;
     if (!this.whatsapp.isConnected()) {
@@ -231,6 +249,8 @@ export class RemindersService implements OnModuleInit {
 
   // ─── Sweep: refresca Redis desde la BDD y reconcilia jobs (cada 25 min) ──────
   async runSweep(): Promise<void> {
+    if (!this.enabled) return;
+
     const now = new Date();
     const horizon = new Date(now.getTime() + HORIZON_DAYS * 24 * 60 * 60 * 1000);
 

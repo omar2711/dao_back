@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { DatabaseModule } from './database/database.module';
 import { getRedisOptions } from './config/redis.config';
+import { isWhatsappEnabled } from './config/features';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { DoctorsModule } from './modules/doctors/doctors.module';
@@ -24,10 +25,16 @@ import { BudgetsModule } from './modules/budgets/budgets.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    BullModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({ connection: getRedisOptions(config) }),
-    }),
+    // Sin Redis no hay colas: en serverless se omite el módulo entero, si no
+    // ioredis reintentaría contra localhost:6379 y tumbaría el arranque.
+    ...(isWhatsappEnabled()
+      ? [
+          BullModule.forRootAsync({
+            inject: [ConfigService],
+            useFactory: (config: ConfigService) => ({ connection: getRedisOptions(config) }),
+          }),
+        ]
+      : []),
     DatabaseModule,
     AuthModule,
     UsersModule,
