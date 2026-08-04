@@ -83,6 +83,16 @@ export class Treatment {
   @Column({ name: 'laboratory_notes', type: 'text', nullable: true })
   laboratoryNotes: string | null;
 
+  // Gasto de laboratorio: se cobra aparte, no forma parte de `cost` ni de `paid`.
+  @Column({
+    name: 'laboratory_cost',
+    type: 'numeric',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
+  laboratoryCost: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

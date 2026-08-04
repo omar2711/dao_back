@@ -79,4 +79,9 @@ export class CreateTreatmentDto {
   @IsOptional()
   @IsString()
   laboratoryNotes?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  laboratoryCost?: number;
 }

@@ -30,6 +30,11 @@ export class ReportsController {
     return this.service.treatmentsByDoctor(from, to);
   }
 
+  @Get('laboratory')
+  laboratory(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.service.laboratory(from, to);
+  }
+
   @Get('monthly-trend')
   monthlyTrend(@Query('months') months?: string) {
     return this.service.monthlyTrend(months ? Number(months) : 6);

@@ -35,6 +35,18 @@ export interface TreatmentsByDoctorRow {
   treatmentsCompleted: number;
   patientsAttended: number;
   paidCompleted: number; // cobrado de tratamientos terminados
+  laboratoryCost: number; // gasto de laboratorio de sus tratamientos
+}
+
+export interface LaboratoryRow {
+  treatmentId: string;
+  type: string;
+  patientName: string;
+  doctorName: string;
+  startDate: string;
+  createdAt: string;
+  laboratoryNotes: string | null;
+  laboratoryCost: number;
 }
 
 export interface MonthlyTrendRow {
@@ -179,6 +191,7 @@ export class ReportsService {
         "COALESCE(SUM(t.paid) FILTER (WHERE t.status = 'COMPLETADO'), 0)",
         'paidCompleted',
       )
+      .addSelect('COALESCE(SUM(t.laboratory_cost), 0)', 'laboratoryCost')
       .groupBy('t.doctor_id')
       .addGroupBy('d.first_name')
       .addGroupBy('d.last_name')
@@ -192,6 +205,7 @@ export class ReportsService {
       treatmentsCompleted: string;
       patientsAttended: string;
       paidCompleted: string;
+      laboratoryCost: string;
     }>();
     return rows.map((r) => ({
       doctorId: r.doctorId,
@@ -200,6 +214,47 @@ export class ReportsService {
       treatmentsCompleted: Number(r.treatmentsCompleted),
       patientsAttended: Number(r.patientsAttended),
       paidCompleted: Number(r.paidCompleted),
+      laboratoryCost: Number(r.laboratoryCost),
+    }));
+  }
+
+  // Detalle de tratamientos que requieren laboratorio, con el monto gastado.
+  async laboratory(from?: string, to?: string): Promise<LaboratoryRow[]> {
+    const query = this.treatments
+      .createQueryBuilder('t')
+      .leftJoin('t.doctor', 'd')
+      .leftJoin('t.patient', 'p')
+      .select('t.id', 'treatmentId')
+      .addSelect('t.type', 'type')
+      .addSelect("p.first_name || ' ' || p.last_name", 'patientName')
+      .addSelect("d.first_name || ' ' || d.last_name", 'doctorName')
+      .addSelect('t.start_date', 'startDate')
+      .addSelect('t.created_at', 'createdAt')
+      .addSelect('t.laboratory_notes', 'laboratoryNotes')
+      .addSelect('t.laboratory_cost', 'laboratoryCost')
+      .where('t.requires_laboratory = true')
+      .orderBy('t.start_date', 'DESC');
+    this.applyDateRange(query, 't.start_date', from, to);
+
+    const rows = await query.getRawMany<{
+      treatmentId: string;
+      type: string;
+      patientName: string;
+      doctorName: string;
+      startDate: string | Date;
+      createdAt: string | Date;
+      laboratoryNotes: string | null;
+      laboratoryCost: string;
+    }>();
+    return rows.map((r) => ({
+      treatmentId: r.treatmentId,
+      type: r.type ?? 'Sin tipo',
+      patientName: r.patientName,
+      doctorName: r.doctorName,
+      startDate: String(r.startDate),
+      createdAt: new Date(r.createdAt).toISOString(),
+      laboratoryNotes: r.laboratoryNotes,
+      laboratoryCost: Number(r.laboratoryCost),
     }));
   }
 
