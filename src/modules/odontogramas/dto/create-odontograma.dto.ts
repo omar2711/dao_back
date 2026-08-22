@@ -22,8 +22,11 @@ export class CreateOdontogramaDto {
   @IsUUID()
   clinicalHistoryId?: string;
 
+  // Obsoleto: la UI ya no lo envía. Se conserva opcional por compatibilidad
+  // con clientes antiguos; la columna queda siempre en INICIAL.
+  @IsOptional()
   @IsEnum(OdontogramaTipo)
-  tipo: OdontogramaTipo;
+  tipo?: OdontogramaTipo;
 
   @IsDateString()
   fecha: string;

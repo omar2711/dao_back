@@ -16,5 +16,8 @@ export function getRedisOptions(config: ConfigService): RedisOptions {
     ...(u.protocol === 'rediss:' ? { tls: {} } : {}),
     // BullMQ exige maxRetriesPerRequest: null en su conexión.
     maxRetriesPerRequest: null,
+    // Backoff creciente con tope de 10s: por defecto ioredis reintenta cada
+    // ~50ms y una caída de Redis genera cientos de errores por minuto.
+    retryStrategy: (times: number) => Math.min(times * 500, 10_000),
   };
 }

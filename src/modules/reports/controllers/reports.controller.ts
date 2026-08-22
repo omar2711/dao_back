@@ -30,6 +30,19 @@ export class ReportsController {
     return this.service.treatmentsByDoctor(from, to);
   }
 
+  // Desglose completo del desempeño de cada doctor tratante:
+  // doctor → paciente → tratamientos, con totales y resumen por tipo.
+  @Get('doctor-detail')
+  doctorDetail(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.service.doctorDetail(from, to);
+  }
+
+  // El mismo árbol restringido a tratamientos con laboratorio.
+  @Get('laboratory-by-doctor')
+  laboratoryByDoctor(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.service.laboratoryByDoctor(from, to);
+  }
+
   @Get('laboratory')
   laboratory(@Query('from') from?: string, @Query('to') to?: string) {
     return this.service.laboratory(from, to);

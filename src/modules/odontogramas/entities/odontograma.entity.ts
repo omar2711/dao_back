@@ -21,6 +21,9 @@ export enum OdontogramaTipo {
 // { "11": [{ code: "AM", color: "blue", surfaces: ["O","M"], type: "RESTAURACION_DEFINITIVA" }] }
 
 @Entity('odontogramas')
+// Un único odontograma por paciente: se vuelve a trabajar siempre sobre el
+// mismo registro en lugar de crear uno nuevo por cada visita.
+@Index('uq_odontograma_patient', ['patientId'], { unique: true })
 // Máximo un odontograma por historia clínica (cuando está vinculado a una).
 @Index('uq_odontograma_ch', ['clinicalHistoryId'], {
   unique: true,
@@ -51,6 +54,9 @@ export class Odontograma {
   @Column({ name: 'clinical_history_id', nullable: true })
   clinicalHistoryId: string;
 
+  // Obsoleto: con un único odontograma por paciente ya no se distingue entre
+  // inicial y de evolución. Se conserva la columna (siempre INICIAL) para no
+  // romper el CHECK ni el DDL existente; no se muestra ni se escribe desde la UI.
   @Column({ type: 'varchar', default: OdontogramaTipo.INICIAL })
   tipo: OdontogramaTipo;
 

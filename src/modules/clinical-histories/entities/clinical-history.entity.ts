@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -12,6 +13,9 @@ import { Patient } from '../../patients/entities/patient.entity';
 import { Doctor } from '../../doctors/entities/doctor.entity';
 
 @Entity('clinical_histories')
+// Una única historia clínica por paciente: la evolución posterior se registra
+// como actualizaciones (clinical_history_entries), no abriendo fichas nuevas.
+@Index('uq_clinical_history_patient', ['patientId'], { unique: true })
 export class ClinicalHistory {
   @PrimaryGeneratedColumn('uuid')
   id: string;

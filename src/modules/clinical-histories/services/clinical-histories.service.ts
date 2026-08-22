@@ -12,21 +12,39 @@ export class ClinicalHistoriesService {
     private repo: Repository<ClinicalHistory>,
   ) {}
 
+  // Un paciente tiene una única historia clínica. Si ya existe, se actualiza en
+  // vez de crear otra: la evolución posterior se registra como actualizaciones
+  // (ClinicalHistoryEntriesService), no abriendo fichas nuevas.
   async create(dto: CreateClinicalHistoryDto): Promise<ClinicalHistory> {
-    const hcNumber = dto.hcNumber ?? (await this.nextHcNumber(dto.patientId));
+    const existing = await this.repo.findOne({
+      where: { patientId: dto.patientId },
+    });
+    if (existing) {
+      const { patientId: _ignored, ...rest } = dto;
+      Object.assign(existing, rest);
+      return this.repo.save(existing);
+    }
+    const hcNumber = dto.hcNumber ?? (await this.nextHcNumber());
     const record = this.repo.create({ ...dto, hcNumber });
     return this.repo.save(record);
   }
 
-  // Autonumera el HC N° por paciente (1, 2, 3...) cuando se deja en blanco.
-  // Solo cuenta hc_number puramente numéricos para no romperse con datos
-  // históricos que pudieran tener otro formato.
-  private async nextHcNumber(patientId: string): Promise<string> {
+  // La historia clínica única del paciente, o null si todavía no tiene.
+  findByPatient(patientId: string): Promise<ClinicalHistory | null> {
+    return this.repo.findOne({
+      where: { patientId },
+      relations: { doctor: true },
+    });
+  }
+
+  // Autonumera el HC N° de forma correlativa en toda la clínica cuando se deja
+  // en blanco. Solo cuenta hc_number puramente numéricos para no romperse con
+  // datos históricos que pudieran tener otro formato.
+  private async nextHcNumber(): Promise<string> {
     const { max } = await this.repo
       .createQueryBuilder('ch')
       .select('MAX(CAST(ch.hc_number AS INTEGER))', 'max')
-      .where('ch.patient_id = :patientId', { patientId })
-      .andWhere("ch.hc_number ~ '^[0-9]+$'")
+      .where("ch.hc_number ~ '^[0-9]+$'")
       .getRawOne<{ max: string | null }>();
     return String((max ? parseInt(max, 10) : 0) + 1);
   }

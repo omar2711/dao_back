@@ -130,10 +130,18 @@ export class BudgetsService {
   }
 
   // Envía el presupuesto por WhatsApp al teléfono del paciente, respetando la
-  // modalidad (con/sin precio, con/sin dientes).
+  // modalidad (con/sin precio, con/sin dientes). Si el cliente adjunta el PDF
+  // (generado en el navegador con la misma modalidad), se manda como documento
+  // con el texto de pie; si no, solo el texto.
   async sendWhatsapp(
     id: string,
-    opts: { showPrices?: boolean; showTeeth?: boolean; phone?: string },
+    opts: {
+      showPrices?: boolean;
+      showTeeth?: boolean;
+      phone?: string;
+      pdfBase64?: string;
+      pdfFileName?: string;
+    },
   ): Promise<{ message: string }> {
     const budget = await this.findOne(id);
     const phone = opts.phone || budget.patient?.phone;
@@ -145,14 +153,29 @@ export class BudgetsService {
       showTeeth: opts.showTeeth !== false,
       clinicName: settings.clinicName,
     });
-    await this.whatsapp.sendText(phone, text);
+
+    if (opts.pdfBase64) {
+      await this.whatsapp.sendDocument(
+        phone,
+        opts.pdfBase64,
+        opts.pdfFileName || 'presupuesto.pdf',
+        'application/pdf',
+        text,
+      );
+    } else {
+      await this.whatsapp.sendText(phone, text);
+    }
 
     // Marcar como ENVIADO si aún es borrador.
     if (budget.status === BudgetStatus.BORRADOR) {
       budget.status = BudgetStatus.ENVIADO;
       await this.repo.save(budget);
     }
-    return { message: 'Presupuesto enviado por WhatsApp.' };
+    return {
+      message: opts.pdfBase64
+        ? 'Presupuesto enviado por WhatsApp con el PDF adjunto.'
+        : 'Presupuesto enviado por WhatsApp.',
+    };
   }
 
   private buildText(

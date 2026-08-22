@@ -20,12 +20,27 @@ export interface RevenueByDoctorRow {
   sessionCount: number;
 }
 
+// Aporte de un doctor a un tipo de tratamiento. Lleva los mismos importes que
+// la fila del tipo para que la UI pueda mostrar exactamente la misma
+// información cuando se filtra por un doctor concreto.
+export interface RevenueByTreatmentDoctorRow {
+  doctorId: string;
+  doctorName: string;
+  total: number;
+  paid: number;
+  pending: number;
+  count: number;
+  completedCount: number;
+}
+
 export interface RevenueByTreatmentRow {
   type: string;
-  total: number; // costo total de los tratamientos terminados de este tipo
+  total: number; // costo total de los tratamientos de este tipo
   paid: number; // cobrado
   pending: number; // por cobrar
-  count: number; // cantidad de tratamientos terminados
+  count: number; // cantidad de tratamientos
+  completedCount: number; // de los cuales, terminados
+  byDoctor: RevenueByTreatmentDoctorRow[]; // desglose por doctor tratante
 }
 
 export interface TreatmentsByDoctorRow {
@@ -55,6 +70,82 @@ export interface MonthlyTrendRow {
   sessionCount: number;
   patients: number;
 }
+
+// ─── Desglose completo por doctor tratante ────────────────────────────────────
+// Jerarquía doctor → paciente → tratamientos, con subtotales en cada nivel y un
+// resumen por tipo de tratamiento. Alimenta tanto "Desempeño del personal" como
+// "Gasto en laboratorio", que solo difieren en el filtro de laboratorio.
+
+export interface DoctorDetailTotals {
+  treatments: number;
+  patients: number;
+  cost: number;
+  paid: number;
+  pending: number;
+  laboratoryCost: number;
+  laboratoryCount: number; // tratamientos que requieren laboratorio
+}
+
+export interface DoctorDetailTreatment {
+  treatmentId: string;
+  type: string;
+  status: string;
+  startDate: string;
+  endDate: string | null;
+  cost: number;
+  paid: number;
+  pending: number;
+  laboratoryCost: number;
+  requiresLaboratory: boolean;
+  laboratoryNotes: string | null;
+  sessionsDone: number;
+  totalSessions: number;
+}
+
+export interface DoctorDetailPatient {
+  patientId: string;
+  patientName: string;
+  treatments: DoctorDetailTreatment[];
+  totals: DoctorDetailTotals;
+}
+
+export interface DoctorDetailTypeRow {
+  type: string;
+  count: number;
+  cost: number;
+  paid: number;
+  pending: number;
+  laboratoryCost: number;
+}
+
+export interface DoctorDetailRow {
+  doctorId: string;
+  doctorName: string;
+  patients: DoctorDetailPatient[];
+  byType: DoctorDetailTypeRow[];
+  totals: DoctorDetailTotals;
+}
+
+const emptyTotals = (): DoctorDetailTotals => ({
+  treatments: 0,
+  patients: 0,
+  cost: 0,
+  paid: 0,
+  pending: 0,
+  laboratoryCost: 0,
+  laboratoryCount: 0,
+});
+
+// Acumula un tratamiento en un bloque de totales. `patients` se cuenta aparte
+// (a nivel doctor son pacientes distintos, a nivel paciente siempre es 1).
+const addToTotals = (t: DoctorDetailTotals, r: DoctorDetailTreatment) => {
+  t.treatments += 1;
+  t.cost += r.cost;
+  t.paid += r.paid;
+  t.pending += r.pending;
+  t.laboratoryCost += r.laboratoryCost;
+  if (r.requiresLaboratory) t.laboratoryCount += 1;
+};
 
 @Injectable()
 export class ReportsService {
@@ -138,38 +229,88 @@ export class ReportsService {
     }));
   }
 
+  // Recaudación por tipo de tratamiento, con el desglose de qué doctor tratante
+  // aportó cada parte. Incluye TODOS los estados: el dinero ya cobrado de un
+  // tratamiento en curso también entró en caja. `completedCount` conserva la
+  // cantidad de terminados para no perder ese dato.
   async revenueByTreatmentType(
     from?: string,
     to?: string,
   ): Promise<RevenueByTreatmentRow[]> {
-    // Basado en tratamientos TERMINADOS (no en sesiones): por tipo se muestra el
-    // costo total, lo cobrado y lo pendiente.
     const query = this.treatments
       .createQueryBuilder('t')
+      .leftJoin('t.doctor', 'd')
       .select('t.type', 'type')
+      .addSelect('t.doctor_id', 'doctorId')
+      .addSelect("d.first_name || ' ' || d.last_name", 'doctorName')
       .addSelect('COALESCE(SUM(t.cost), 0)', 'total')
       .addSelect('COALESCE(SUM(t.paid), 0)', 'paid')
       .addSelect('COALESCE(SUM(t.cost - t.paid), 0)', 'pending')
       .addSelect('COUNT(*)', 'count')
-      .where("t.status = 'COMPLETADO'")
+      .addSelect(
+        "COUNT(*) FILTER (WHERE t.status = 'COMPLETADO')",
+        'completedCount',
+      )
       .groupBy('t.type')
-      .orderBy('"total"', 'DESC');
+      .addGroupBy('t.doctor_id')
+      .addGroupBy('d.first_name')
+      .addGroupBy('d.last_name');
     this.applyDateRange(query, 't.start_date', from, to);
 
     const rows = await query.getRawMany<{
       type: string;
+      doctorId: string;
+      doctorName: string;
       total: string;
       paid: string;
       pending: string;
       count: string;
+      completedCount: string;
     }>();
-    return rows.map((r) => ({
-      type: r.type ?? 'Sin tipo',
-      total: Number(r.total),
-      paid: Number(r.paid),
-      pending: Number(r.pending),
-      count: Number(r.count),
-    }));
+
+    // Consolidar las filas (tipo × doctor) en un registro por tipo.
+    const byType = new Map<string, RevenueByTreatmentRow>();
+    for (const r of rows) {
+      const type = r.type ?? 'Sin tipo';
+      let entry = byType.get(type);
+      if (!entry) {
+        entry = {
+          type,
+          total: 0,
+          paid: 0,
+          pending: 0,
+          count: 0,
+          completedCount: 0,
+          byDoctor: [],
+        };
+        byType.set(type, entry);
+      }
+      entry.total += Number(r.total);
+      entry.paid += Number(r.paid);
+      entry.pending += Number(r.pending);
+      entry.count += Number(r.count);
+      entry.completedCount += Number(r.completedCount);
+      entry.byDoctor.push({
+        doctorId: r.doctorId,
+        doctorName: r.doctorName ?? 'Sin doctor',
+        total: Number(r.total),
+        paid: Number(r.paid),
+        pending: Number(r.pending),
+        count: Number(r.count),
+        completedCount: Number(r.completedCount),
+      });
+    }
+
+    // Desempate por nombre/tipo: con importes en 0 el orden quedaría indefinido
+    // y la lista bailaría entre recargas.
+    const result = [...byType.values()];
+    for (const entry of result) {
+      entry.byDoctor.sort(
+        (a, b) => b.paid - a.paid || a.doctorName.localeCompare(b.doctorName, 'es'),
+      );
+    }
+    result.sort((a, b) => b.paid - a.paid || a.type.localeCompare(b.type, 'es'));
+    return result;
   }
 
   async treatmentsByDoctor(
@@ -256,6 +397,181 @@ export class ReportsService {
       laboratoryNotes: r.laboratoryNotes,
       laboratoryCost: Number(r.laboratoryCost),
     }));
+  }
+
+  // ─── Desglose por doctor tratante ─────────────────────────────────────────
+
+  // Desempeño completo de cada doctor: sus pacientes, los tratamientos de cada
+  // uno y los subtotales, más un resumen por tipo de tratamiento.
+  doctorDetail(from?: string, to?: string): Promise<DoctorDetailRow[]> {
+    return this.buildDoctorTree(from, to, false);
+  }
+
+  // El mismo árbol restringido a los tratamientos que requieren laboratorio:
+  // doctor → paciente → tratamientos, todo ordenado y con subtotales.
+  laboratoryByDoctor(from?: string, to?: string): Promise<DoctorDetailRow[]> {
+    return this.buildDoctorTree(from, to, true);
+  }
+
+  // Una sola consulta plana sobre `treatments`, agrupada en tres niveles en TS.
+  // La atribución es al doctor TRATANTE (t.doctor_id) y el eje de fecha es
+  // t.start_date, igual que el resto de reportes basados en tratamientos.
+  //
+  // Nota: laboratory_cost se reporta siempre en su propia columna y nunca se
+  // suma a cost/paid — se cobra aparte (ver Treatment.laboratoryCost).
+  private async buildDoctorTree(
+    from?: string,
+    to?: string,
+    labOnly = false,
+  ): Promise<DoctorDetailRow[]> {
+    const query = this.treatments
+      .createQueryBuilder('t')
+      .leftJoin('t.doctor', 'd')
+      .leftJoin('t.patient', 'p')
+      .select('t.id', 'treatmentId')
+      .addSelect('t.type', 'type')
+      .addSelect('t.status', 'status')
+      .addSelect('t.start_date', 'startDate')
+      .addSelect('t.end_date', 'endDate')
+      .addSelect('t.cost', 'cost')
+      .addSelect('t.paid', 'paid')
+      .addSelect('t.laboratory_cost', 'laboratoryCost')
+      .addSelect('t.requires_laboratory', 'requiresLaboratory')
+      .addSelect('t.laboratory_notes', 'laboratoryNotes')
+      .addSelect('t.sessions_done', 'sessionsDone')
+      .addSelect('t.total_sessions', 'totalSessions')
+      .addSelect('t.doctor_id', 'doctorId')
+      .addSelect("d.first_name || ' ' || d.last_name", 'doctorName')
+      .addSelect('t.patient_id', 'patientId')
+      .addSelect("p.first_name || ' ' || p.last_name", 'patientName')
+      .orderBy('t.start_date', 'DESC');
+    if (labOnly) query.andWhere('t.requires_laboratory = true');
+    this.applyDateRange(query, 't.start_date', from, to);
+
+    const rows = await query.getRawMany<{
+      treatmentId: string;
+      type: string | null;
+      status: string;
+      startDate: string | Date;
+      endDate: string | Date | null;
+      cost: string;
+      paid: string;
+      laboratoryCost: string;
+      requiresLaboratory: boolean;
+      laboratoryNotes: string | null;
+      sessionsDone: number | null;
+      totalSessions: number | null;
+      doctorId: string;
+      doctorName: string | null;
+      patientId: string;
+      patientName: string | null;
+    }>();
+
+    const doctors = new Map<
+      string,
+      DoctorDetailRow & { patientIndex: Map<string, DoctorDetailPatient> }
+    >();
+    // Acumulador de tipos por doctor: doctorId → type → fila.
+    const typeIndex = new Map<string, Map<string, DoctorDetailTypeRow>>();
+
+    for (const r of rows) {
+      const cost = Number(r.cost) || 0;
+      const paid = Number(r.paid) || 0;
+      const treatment: DoctorDetailTreatment = {
+        treatmentId: r.treatmentId,
+        type: r.type ?? 'Sin tipo',
+        status: r.status,
+        startDate: String(r.startDate),
+        endDate: r.endDate ? String(r.endDate) : null,
+        cost,
+        paid,
+        pending: cost - paid,
+        laboratoryCost: Number(r.laboratoryCost) || 0,
+        requiresLaboratory: Boolean(r.requiresLaboratory),
+        laboratoryNotes: r.laboratoryNotes,
+        sessionsDone: Number(r.sessionsDone) || 0,
+        totalSessions: Number(r.totalSessions) || 0,
+      };
+
+      const doctorId = r.doctorId ?? 'sin-doctor';
+      let doctor = doctors.get(doctorId);
+      if (!doctor) {
+        doctor = {
+          doctorId,
+          doctorName: r.doctorName ?? 'Sin doctor',
+          patients: [],
+          byType: [],
+          totals: emptyTotals(),
+          patientIndex: new Map(),
+        };
+        doctors.set(doctorId, doctor);
+        typeIndex.set(doctorId, new Map());
+      }
+
+      const patientId = r.patientId ?? 'sin-paciente';
+      let patient = doctor.patientIndex.get(patientId);
+      if (!patient) {
+        patient = {
+          patientId,
+          patientName: r.patientName ?? 'Sin paciente',
+          treatments: [],
+          totals: { ...emptyTotals(), patients: 1 },
+        };
+        doctor.patientIndex.set(patientId, patient);
+        doctor.patients.push(patient);
+        doctor.totals.patients += 1;
+      }
+
+      patient.treatments.push(treatment);
+      addToTotals(patient.totals, treatment);
+      addToTotals(doctor.totals, treatment);
+
+      const types = typeIndex.get(doctorId)!;
+      let typeRow = types.get(treatment.type);
+      if (!typeRow) {
+        typeRow = {
+          type: treatment.type,
+          count: 0,
+          cost: 0,
+          paid: 0,
+          pending: 0,
+          laboratoryCost: 0,
+        };
+        types.set(treatment.type, typeRow);
+      }
+      typeRow.count += 1;
+      typeRow.cost += treatment.cost;
+      typeRow.paid += treatment.paid;
+      typeRow.pending += treatment.pending;
+      typeRow.laboratoryCost += treatment.laboratoryCost;
+    }
+
+    // Orden final: doctores por el importe que da sentido a la vista (lo
+    // recaudado, o el gasto de laboratorio en la vista de laboratorio),
+    // pacientes por nombre, tratamientos por fecha descendente (ya vienen así
+    // de la consulta).
+    // Desempate por nombre: en la vista de laboratorio los importes pueden ser
+    // todos 0, y sin desempate el orden quedaría indefinido entre recargas.
+    const doctorWeight = (t: DoctorDetailTotals) =>
+      labOnly ? t.laboratoryCost : t.paid;
+
+    return [...doctors.values()]
+      .map(({ patientIndex: _ignored, ...doctor }) => ({
+        ...doctor,
+        patients: doctor.patients.sort((a, b) =>
+          a.patientName.localeCompare(b.patientName, 'es'),
+        ),
+        byType: [...(typeIndex.get(doctor.doctorId)?.values() ?? [])].sort(
+          (a, b) =>
+            (labOnly ? b.laboratoryCost - a.laboratoryCost : b.paid - a.paid) ||
+            a.type.localeCompare(b.type, 'es'),
+        ),
+      }))
+      .sort(
+        (a, b) =>
+          doctorWeight(b.totals) - doctorWeight(a.totals) ||
+          a.doctorName.localeCompare(b.doctorName, 'es'),
+      );
   }
 
   async monthlyTrend(months = 6): Promise<MonthlyTrendRow[]> {

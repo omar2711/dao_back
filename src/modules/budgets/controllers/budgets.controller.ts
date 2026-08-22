@@ -28,6 +28,16 @@ class SendWhatsappDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  // PDF del presupuesto generado en el navegador (sin el prefijo data:).
+  // Si viene, se envía como adjunto con el texto de pie; si no, solo texto.
+  @IsOptional()
+  @IsString()
+  pdfBase64?: string;
+
+  @IsOptional()
+  @IsString()
+  pdfFileName?: string;
 }
 
 @Controller('budgets')

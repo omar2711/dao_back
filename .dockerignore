@@ -1,0 +1,18 @@
+# Se reinstalan dentro de la imagen para la plataforma correcta: bcrypt es un
+# binario nativo y el node_modules de Windows no sirve en Linux.
+node_modules
+dist
+
+# Secretos y estado: van por variables de entorno y por volumen, nunca dentro de
+# la imagen. Una imagen con el .env dentro es un secreto que viaja a cualquier
+# registro donde se publique.
+.env
+.env.*
+uploads
+whatsapp-auth
+
+.git
+.github
+*.log
+coverage
+test

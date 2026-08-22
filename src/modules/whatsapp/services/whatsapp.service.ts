@@ -176,12 +176,37 @@ export class WhatsappService implements OnModuleInit {
 
   // Envía un mensaje de texto. Devuelve true si se envió.
   async sendText(phone: string, text: string): Promise<boolean> {
+    const jid = this.requireJid(phone);
+    await this.sock!.sendMessage(jid, { text });
+    return true;
+  }
+
+  // Envía un archivo adjunto (p. ej. el PDF de un presupuesto) con un texto
+  // opcional como pie. Va en un solo mensaje, no en dos.
+  async sendDocument(
+    phone: string,
+    base64: string,
+    fileName: string,
+    mimetype: string,
+    caption?: string,
+  ): Promise<boolean> {
+    const jid = this.requireJid(phone);
+    await this.sock!.sendMessage(jid, {
+      document: Buffer.from(base64, 'base64'),
+      mimetype,
+      fileName,
+      caption,
+    });
+    return true;
+  }
+
+  // Valida conexión y teléfono de una vez, para que ambos envíos fallen igual.
+  private requireJid(phone: string): string {
     if (!this.isConnected() || !this.sock) {
       throw new Error('WhatsApp no está conectado.');
     }
     const jid = this.toJid(phone);
     if (!jid) throw new Error(`Teléfono inválido: "${phone}"`);
-    await this.sock.sendMessage(jid, { text });
-    return true;
+    return jid;
   }
 }

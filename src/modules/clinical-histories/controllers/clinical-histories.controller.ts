@@ -17,8 +17,11 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { ClinicalHistoriesService } from '../services/clinical-histories.service';
 import { ClinicalHistoryFilesService } from '../services/clinical-history-files.service';
+import { ClinicalHistoryEntriesService } from '../services/clinical-history-entries.service';
 import { CreateClinicalHistoryDto } from '../dto/create-clinical-history.dto';
 import { UpdateClinicalHistoryDto } from '../dto/update-clinical-history.dto';
+import { CreateClinicalHistoryEntryDto } from '../dto/create-clinical-history-entry.dto';
+import { UpdateClinicalHistoryEntryDto } from '../dto/update-clinical-history-entry.dto';
 import { clinicalHistoryFileInterceptorOptions } from '../utils/clinical-history-file-storage';
 
 @Controller('clinical-histories')
@@ -27,6 +30,7 @@ export class ClinicalHistoriesController {
   constructor(
     private readonly service: ClinicalHistoriesService,
     private readonly filesService: ClinicalHistoryFilesService,
+    private readonly entriesService: ClinicalHistoryEntriesService,
   ) {}
 
   @Post()
@@ -69,5 +73,36 @@ export class ClinicalHistoriesController {
   @Delete(':id/files/:fileId')
   removeFile(@Param('id') id: string, @Param('fileId') fileId: string) {
     return this.filesService.remove(id, fileId);
+  }
+
+  // ─── Hoja de evolución ────────────────────────────────────────────────────
+  // Actualizaciones fechadas sobre la historia clínica única del paciente.
+  // Las rutas de edición/borrado cuelgan de 'entries/:entryId' (dos segmentos),
+  // por lo que no colisionan con @Get(':id').
+
+  @Get(':id/entries')
+  getEntries(@Param('id') id: string) {
+    return this.entriesService.findByHistory(id);
+  }
+
+  @Post(':id/entries')
+  createEntry(
+    @Param('id') id: string,
+    @Body() dto: CreateClinicalHistoryEntryDto,
+  ) {
+    return this.entriesService.create(id, dto);
+  }
+
+  @Patch('entries/:entryId')
+  updateEntry(
+    @Param('entryId') entryId: string,
+    @Body() dto: UpdateClinicalHistoryEntryDto,
+  ) {
+    return this.entriesService.update(entryId, dto);
+  }
+
+  @Delete('entries/:entryId')
+  removeEntry(@Param('entryId') entryId: string) {
+    return this.entriesService.remove(entryId);
   }
 }
