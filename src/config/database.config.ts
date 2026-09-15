@@ -2,10 +2,9 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { isServerless } from './features';
 
-// Neon exige TLS, pero un PostgreSQL instalado en el propio VPS normalmente no
-// lo tiene configurado y forzarlo aborta la conexión al arrancar. Se decide por
-// la URL en vez de por una bandera aparte, para que no haya dos sitios que
-// puedan contradecirse.
+// Neon exige TLS, pero un PostgreSQL local normalmente no lo tiene configurado
+// y forzarlo aborta la conexión al arrancar. Se decide por la URL en vez de por
+// una bandera aparte, para que no haya dos sitios que puedan contradecirse.
 export function needsSsl(url?: string): boolean {
   if (!url) return false;
   // sslmode explícito en la URL manda sobre cualquier heurística.

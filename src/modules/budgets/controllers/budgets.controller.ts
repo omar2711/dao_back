@@ -29,8 +29,10 @@ class SendWhatsappDto {
   @IsString()
   phone?: string;
 
-  // PDF del presupuesto generado en el navegador (sin el prefijo data:).
-  // Si viene, se envía como adjunto con el texto de pie; si no, solo texto.
+  // Se aceptan pero ya no se usan: el envío ahora devuelve un enlace wa.me,
+  // que solo admite texto. Siguen declarados a propósito porque el
+  // ValidationPipe global corre con forbidNonWhitelisted, así que quitarlos
+  // haría fallar con 400 a los clientes que todavía los mandan.
   @IsOptional()
   @IsString()
   pdfBase64?: string;

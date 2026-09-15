@@ -6,7 +6,6 @@ import { BudgetItem } from '../entities/budget-item.entity';
 import { Treatment, TreatmentStatus } from '../../treatments/entities/treatment.entity';
 import { CreateBudgetDto } from '../dto/create-budget.dto';
 import { UpdateBudgetDto } from '../dto/update-budget.dto';
-import { WhatsappService } from '../../whatsapp/services/whatsapp.service';
 import { SettingsService } from '../../settings/services/settings.service';
 
 const money = (n: number) => `S/. ${Number(n || 0).toFixed(2)}`;
@@ -16,7 +15,6 @@ export class BudgetsService {
   constructor(
     @InjectRepository(Budget) private readonly repo: Repository<Budget>,
     private readonly dataSource: DataSource,
-    private readonly whatsapp: WhatsappService,
     private readonly settings: SettingsService,
   ) {}
 
@@ -129,10 +127,18 @@ export class BudgetsService {
     return { message: 'Presupuesto eliminado' };
   }
 
-  // Envía el presupuesto por WhatsApp al teléfono del paciente, respetando la
-  // modalidad (con/sin precio, con/sin dientes). Si el cliente adjunta el PDF
-  // (generado en el navegador con la misma modalidad), se manda como documento
-  // con el texto de pie; si no, solo el texto.
+  // Prepara el envío del presupuesto por WhatsApp respetando la modalidad
+  // (con/sin precio, con/sin dientes).
+  //
+  // El servidor NO envía el mensaje: devuelve un enlace wa.me con el texto ya
+  // redactado para que el navegador lo abra. Enviar desde el servidor exigía
+  // Baileys —un socket permanente y disco de escritura—, imposible en las
+  // funciones serverless de Vercel, que son efímeras y de sistema de ficheros
+  // de solo lectura. El enlace consigue lo mismo sin infraestructura: usa la
+  // sesión de WhatsApp que el recepcionista ya tiene abierta.
+  //
+  // Contrapartida: wa.me solo admite texto, así que el PDF no viaja adjunto.
+  // Se descarga desde la misma pantalla y se adjunta a mano.
   async sendWhatsapp(
     id: string,
     opts: {
@@ -142,10 +148,13 @@ export class BudgetsService {
       pdfBase64?: string;
       pdfFileName?: string;
     },
-  ): Promise<{ message: string }> {
+  ): Promise<{ message: string; url: string; phone: string }> {
     const budget = await this.findOne(id);
     const phone = opts.phone || budget.patient?.phone;
     if (!phone) throw new BadRequestException('El paciente no tiene un teléfono registrado.');
+
+    const digits = this.toWaNumber(phone);
+    if (!digits) throw new BadRequestException(`Teléfono inválido: "${phone}"`);
 
     const settings = await this.settings.get();
     const text = this.buildText(budget, {
@@ -154,28 +163,30 @@ export class BudgetsService {
       clinicName: settings.clinicName,
     });
 
-    if (opts.pdfBase64) {
-      await this.whatsapp.sendDocument(
-        phone,
-        opts.pdfBase64,
-        opts.pdfFileName || 'presupuesto.pdf',
-        'application/pdf',
-        text,
-      );
-    } else {
-      await this.whatsapp.sendText(phone, text);
-    }
+    const url = `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 
     // Marcar como ENVIADO si aún es borrador.
     if (budget.status === BudgetStatus.BORRADOR) {
       budget.status = BudgetStatus.ENVIADO;
       await this.repo.save(budget);
     }
+
     return {
-      message: opts.pdfBase64
-        ? 'Presupuesto enviado por WhatsApp con el PDF adjunto.'
-        : 'Presupuesto enviado por WhatsApp.',
+      message: 'Abriendo WhatsApp con el presupuesto listo para enviar.',
+      url,
+      phone: digits,
     };
+  }
+
+  // Normaliza un teléfono peruano al formato que espera wa.me: solo dígitos,
+  // con código de país y sin el "+".
+  // Acepta "987654321", "+51 987 654 321", "51987654321", etc.
+  private toWaNumber(phone: string): string | null {
+    let digits = (phone || '').replace(/\D/g, '');
+    if (!digits) return null;
+    if (digits.length === 9) digits = `51${digits}`; // celular peruano sin código país
+    if (digits.startsWith('051')) digits = digits.slice(1);
+    return digits;
   }
 
   private buildText(

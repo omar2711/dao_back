@@ -1,9 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { BullModule } from '@nestjs/bullmq';
+import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './database/database.module';
-import { getRedisOptions } from './config/redis.config';
-import { isRedisEnabled } from './config/features';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { DoctorsModule } from './modules/doctors/doctors.module';
@@ -18,8 +15,6 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SettingsModule } from './modules/settings/settings.module';
-import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
-import { RemindersModule } from './modules/reminders/reminders.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
 import { HealthController } from './common/controllers/health.controller';
 
@@ -27,16 +22,6 @@ import { HealthController } from './common/controllers/health.controller';
   controllers: [HealthController],
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    // Sin REDIS_URL no hay colas: se omite el módulo entero, si no ioredis
-    // reintentaría contra un puerto muerto y llenaría el log de ECONNREFUSED.
-    ...(isRedisEnabled()
-      ? [
-          BullModule.forRootAsync({
-            inject: [ConfigService],
-            useFactory: (config: ConfigService) => ({ connection: getRedisOptions(config) }),
-          }),
-        ]
-      : []),
     DatabaseModule,
     AuthModule,
     UsersModule,
@@ -52,8 +37,6 @@ import { HealthController } from './common/controllers/health.controller';
     InventoryModule,
     NotificationsModule,
     SettingsModule,
-    WhatsappModule,
-    RemindersModule,
     BudgetsModule,
   ],
 })

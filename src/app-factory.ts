@@ -81,9 +81,9 @@ function corsOriginChecker(allowed: string[]) {
   };
 }
 
-// Configuración compartida entre el arranque local/VPS (main.ts) y el handler
-// serverless (serverless.ts), para que CORS, el prefijo y los pipes no se
-// desincronicen entre ambos entornos.
+// Configuración compartida entre el arranque local (main.ts) y el handler
+// serverless de Vercel (serverless.ts), para que CORS, el prefijo y los pipes
+// no se desincronicen entre ambos entornos.
 export async function createApp(): Promise<NestExpressApplication> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
