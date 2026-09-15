@@ -21,6 +21,10 @@ const silentLogger: any = {
 };
 
 export interface WhatsappStatus {
+  // false cuando ENABLE_WHATSAPP=false o el entorno es serverless. La UI lo usa
+  // para dejar de sondear el estado y decir "deshabilitado" en vez de quedarse
+  // en "conectando" para siempre.
+  enabled: boolean;
   connected: boolean;
   connecting: boolean;
   number: string | null;
@@ -52,7 +56,10 @@ export class WhatsappService implements OnModuleInit {
     // Baileys necesita filesystem con escritura (auth-state) y un socket de larga
     // vida: nada de eso existe en serverless, así que no se intenta conectar.
     if (!isWhatsappEnabled()) {
-      this.logger.warn('WhatsApp deshabilitado en este entorno (sin proceso persistente).');
+      this.logger.warn(
+        'WhatsApp deshabilitado: no se abre el socket ni se genera QR. ' +
+          'Ponga ENABLE_WHATSAPP=true en el .env para reactivarlo.',
+      );
       return;
     }
     if (this.connecting) return;
@@ -139,6 +146,7 @@ export class WhatsappService implements OnModuleInit {
 
   getStatus(): WhatsappStatus {
     return {
+      enabled: isWhatsappEnabled(),
       connected: this.connected,
       connecting: this.connecting,
       number: this.connectedNumber,
@@ -202,6 +210,11 @@ export class WhatsappService implements OnModuleInit {
 
   // Valida conexión y teléfono de una vez, para que ambos envíos fallen igual.
   private requireJid(phone: string): string {
+    // Apagado a propósito: el mensaje lo distingue de "el socket se cayó", que
+    // se arregla escaneando el QR y no tocando la configuración.
+    if (!isWhatsappEnabled()) {
+      throw new Error('WhatsApp está deshabilitado (ENABLE_WHATSAPP=false).');
+    }
     if (!this.isConnected() || !this.sock) {
       throw new Error('WhatsApp no está conectado.');
     }
