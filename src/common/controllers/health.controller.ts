@@ -1,16 +1,17 @@
 import { Controller, Get } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
-// Endpoint público de salud. Lo usan el HEALTHCHECK de la imagen Docker y el
-// `depends_on: condition: service_healthy` del compose, así que no lleva guardas:
-// un 401 haría que el contenedor se considerase enfermo para siempre.
+// Endpoint público de salud, sin guardas: se consulta desde fuera para saber si
+// el despliegue está vivo, y un 401 lo haría inútil.
 //
-// Es una comprobación de VIDA, no de disponibilidad: dice que el proceso
-// responde, deliberadamente sin tocar la base de datos. Si consultara Postgres,
-// un corte breve de la base haría que Docker matara y reiniciara el backend en
-// bucle —convirtiendo un problema pasajero en una caída— y además reiniciaría la
-// sesión de WhatsApp cada vez.
+// GET /api/health es una comprobación de VIDA: dice que el proceso responde,
+// deliberadamente sin tocar la base de datos, para que un corte pasajero de
+// Postgres no marque como caído un backend que está perfectamente vivo.
 @Controller('health')
 export class HealthController {
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+
   @Get()
   check() {
     return {
@@ -18,5 +19,37 @@ export class HealthController {
       uptime: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),
     };
+  }
+
+  // GET /api/health/db sí consulta la base, y es la forma de distinguir "el
+  // backend está caído" de "el backend vive pero no alcanza Postgres" sin tener
+  // que leer los logs de la plataforma. Nunca devuelve la URL de conexión ni las
+  // credenciales: solo si hay URL configurada, y el motivo del fallo.
+  @Get('db')
+  async checkDb() {
+    const configured = !!process.env.DATABASE_URL;
+    const started = Date.now();
+
+    try {
+      await this.dataSource.query('select 1');
+      return {
+        status: 'ok',
+        database: 'conectada',
+        urlConfigurada: configured,
+        ms: Date.now() - started,
+      };
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      return {
+        status: 'error',
+        database: 'sin conexión',
+        urlConfigurada: configured,
+        ms: Date.now() - started,
+        // El código (ENOTFOUND, ECONNREFUSED, 28P01...) suele bastar para saber
+        // si falta la variable, si la contraseña es otra o si no hay red.
+        codigo: err.code ?? null,
+        detalle: err.message,
+      };
+    }
   }
 }
