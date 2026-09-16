@@ -15,8 +15,16 @@ const corsLogger = new Logger('CORS');
 const DEV_CORS_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:3001',
-  'https://dao-front-dun.vercel.app',
 ];
+
+// El frontend vive en Vercel, que reparte un dominio distinto a cada deploy de
+// preview además del de producción. Listarlos a mano es imposible, así que el
+// comodín va siempre permitido: sin esto, cada preview quedaba bloqueada por
+// CORS y el login fallaba sin decir por qué.
+//
+// Para restringirlo a un dominio concreto, basta con definir CORS_ORIGINS: si
+// está, manda ella y este comodín no se añade.
+const VERCEL_CORS_ORIGINS = ['https://*.vercel.app'];
 
 // Quita la barra final: el navegador manda el Origin sin ella y no haría match.
 const normalize = (o: string) => o.trim().replace(/\/+$/, '');
@@ -29,18 +37,20 @@ export function resolveCorsOrigins(): string[] {
   const fromEnv = envCorsOrigins();
   const isProd = process.env.NODE_ENV === 'production';
 
-  if (!isProd) return [...new Set([...DEV_CORS_ORIGINS, ...fromEnv])];
+  if (!isProd) {
+    return [...new Set([...DEV_CORS_ORIGINS, ...VERCEL_CORS_ORIGINS, ...fromEnv])];
+  }
 
-  // En producción sin CORS_ORIGINS se cae a los valores de desarrollo en vez de
-  // dejar la aplicación inaccesible, pero se avisa fuerte: es un despliegue mal
-  // configurado, no un modo de funcionamiento.
+  // En producción sin CORS_ORIGINS se permiten los dominios de Vercel, que es
+  // donde corre el frontend. NO se cae a los de desarrollo: dejar localhost
+  // abierto en un servidor público permitiría a cualquier app local del usuario
+  // llamar a la API con sus credenciales.
   if (fromEnv.length === 0) {
     corsLogger.warn(
-      'CORS_ORIGINS está vacío en producción. Usando los orígenes de desarrollo ' +
-        '(localhost incluido), que NO deberían estar permitidos en un servidor ' +
-        'público. Defina CORS_ORIGINS=https://su-dominio en el .env.',
+      'CORS_ORIGINS está vacío. Permitiendo solo *.vercel.app. Defina ' +
+        'CORS_ORIGINS=https://su-dominio para restringirlo a su dominio.',
     );
-    return [...DEV_CORS_ORIGINS];
+    return [...VERCEL_CORS_ORIGINS];
   }
   return [...new Set(fromEnv)];
 }
