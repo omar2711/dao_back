@@ -1,6 +1,13 @@
 import { Logger } from '@nestjs/common';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
+// Import estático imprescindible, aunque TypeORM sepa cargar 'pg' por su
+// cuenta: lo hace con un require() dinámico dentro de loadDependencies(), y el
+// empaquetador de Vercel solo sigue imports estáticos. Sin esta línea, 'pg' se
+// queda fuera del bundle y la función muere al arrancar con
+// "DriverPackageNotInstalledError: Postgres package has not been found
+// installed", devolviendo 500 en todas las rutas. Se pasa abajo como `driver`.
+import * as pgDriver from 'pg';
 import { isServerless } from './features';
 
 const logger = new Logger('Database');
@@ -43,11 +50,21 @@ export const getDatabaseConfig = (config: ConfigService): TypeOrmModuleOptions =
 
   return {
     type: 'postgres',
+    // Se entrega el driver ya resuelto en vez de dejar que TypeORM haga su
+    // require() dinámico, que en el bundle de Vercel no encuentra nada.
+    driver: pgDriver,
     url,
     // rejectUnauthorized: false porque Neon presenta un certificado que no está
     // en el almacén por defecto de Node.
     ssl: needsSsl(url) ? { rejectUnauthorized: false } : false,
+    // Dos vías a propósito, por el mismo motivo que el driver de arriba: el glob
+    // se resuelve leyendo el disco en tiempo de ejecución, y en el paquete que
+    // Vercel sube solo entra lo que alcanza siguiendo imports. autoLoadEntities
+    // recoge las que cada módulo registra con forFeature() —las 17, comprobado—,
+    // que sí son imports estáticos. Si el glob no encuentra nada, esta segunda
+    // vía evita el "No metadata for ... was found".
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+    autoLoadEntities: true,
     synchronize: config.get<string>('NODE_ENV') === 'development',
     logging: config.get<string>('NODE_ENV') === 'development',
     // Un Neon dormido tarda varios segundos en despertar (medido: ~7 s en la
