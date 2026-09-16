@@ -1,8 +1,15 @@
 import '@nestjs/core';
 import { createApp } from './app-factory';
 
-// Arranque como proceso normal, para desarrollo local.
-// El despliegue en Vercel NO pasa por acá: usa src/serverless.ts vía api/index.js.
+// Único arranque, tanto en local como en Vercel.
+//
+// Vercel detecta el proyecto como backend de NestJS y busca un entrypoint
+// dentro del directorio de salida (dist/main.js, ver vercel.json), así que no
+// hace falta ningún handler aparte: levanta este mismo servidor y le inyecta
+// PORT. Por eso PORT manda sobre APP_PORT.
+//
+// No reintroducir el patrón api/index.js + "rewrites": esta versión de Vercel
+// lo ignora y falla con "No entrypoint found in output directory".
 async function bootstrap() {
   const app = await createApp();
 

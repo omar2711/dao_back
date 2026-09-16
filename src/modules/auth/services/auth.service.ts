@@ -1,7 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
+// bcryptjs y no bcrypt: este último es un binario nativo que Vercel no compila
+// (su script de instalación no se ejecuta), así que el require fallaba en
+// runtime y tumbaba el login. bcryptjs es JavaScript puro, misma API, y
+// verifica los hashes ya existentes.
+import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../../users/services/users.service';
 import { SettingsService } from '../../settings/services/settings.service';
 
